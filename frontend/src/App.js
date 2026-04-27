@@ -717,47 +717,211 @@ function Report({ session, groups, onClose }) {
   });
 
   const handlePPTX = async () => {
-    setGeneratingPPT(true);
-    try {
-      // 1. Get AI Themes
-      const aiData = await generateThemes(groups);
-      
-      // 2. Build PPTX
-      let pres = new pptxgen();
-      pres.layout = "LAYOUT_16x9";
-      
-      // Slide 1: Title
-      let slide1 = pres.addSlide();
-      slide1.background = { color: "17468B" };
-      slide1.addText("Culture Gap Assessment", { x: 1, y: 2, w: 8, h: 1, fontSize: 44, color: "FFFFFF", bold: true, align: "center" });
-      slide1.addText(`${session.sessionName} | ${today}`, { x: 1, y: 3.5, w: 8, h: 1, fontSize: 20, color: "FAB41E", align: "center" });
+  setGeneratingPPT(true);
+  try {
+    const aiData = await generateThemes(groups);
+    let pres = new pptxgen();
+    pres.layout = "LAYOUT_16x9";
 
-      // Slide 2: Executive Summary
-      let slide2 = pres.addSlide();
-      slide2.addText("Executive Summary", { x: 0.5, y: 0.5, w: 8, h: 0.8, fontSize: 28, color: "17468B", bold: true });
-      slide2.addText(aiData.executiveSummary, { x: 0.5, y: 1.5, w: 9, h: 1.5, fontSize: 16, color: "333333" });
-      slide2.addText("Key Themes & Objectives:", { x: 0.5, y: 3.5, w: 8, h: 0.5, fontSize: 18, color: "17468B", bold: true });
-      aiData.themes.forEach((t, i) => {
-        slide2.addText(`• ${t}`, { x: 0.8, y: 4.2 + (i * 0.5), w: 8.5, h: 0.5, fontSize: 14, color: "333333" });
+    const NAVY   = "17468B";
+    const DARK   = "0d2a5a";
+    const GOLD   = "FAB41E";
+    const WHITE  = "FFFFFF";
+    const LIGHT  = "EEF3FB";
+    const GREY   = "4A6080";
+    const mkShadow = () => ({ type:"outer", blur:8, offset:3, angle:135, color:"000000", opacity:0.13 });
+
+    // ── SLIDE 1: Title ──────────────────────────────────────────────────────
+    let s1 = pres.addSlide();
+    s1.background = { color: DARK };
+    s1.addShape(pres.shapes.RECTANGLE, { x:0, y:4.8, w:10, h:0.825, fill:{ color: NAVY }, line:{ color: NAVY } });
+    s1.addShape(pres.shapes.RECTANGLE, { x:0, y:4.72, w:10, h:0.08, fill:{ color: GOLD }, line:{ color: GOLD } });
+    s1.addText("CULTURE GAP ASSESSMENT", { x:0.6, y:1.1, w:8.8, h:0.6, fontSize:13, bold:true, color:GOLD, charSpacing:5 });
+    s1.addText(session.sessionName, { x:0.6, y:1.75, w:8.8, h:1.4, fontSize:42, bold:true, color:WHITE, fontFace:"Calibri" });
+    s1.addText(`${today}  ·  Session ${session.code}  ·  ${session.numGroups} Groups`, { x:0.6, y:3.3, w:8.8, h:0.5, fontSize:14, color:"8aaad4" });
+    s1.addText("Powered by Carnelian Co  ·  Confidential", { x:0.6, y:4.9, w:8.8, h:0.5, fontSize:11, color:"aabbdd", italic:true });
+
+    // ── SLIDE 2: Executive Summary ──────────────────────────────────────────
+    let s2 = pres.addSlide();
+    s2.background = { color: "F4F6FB" };
+    s2.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:1.05, fill:{ color: NAVY }, line:{ color: NAVY } });
+    s2.addShape(pres.shapes.RECTANGLE, { x:0, y:1.05, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
+    s2.addText("EXECUTIVE SUMMARY", { x:0.5, y:0.22, w:9, h:0.6, fontSize:22, bold:true, color:WHITE });
+    s2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:1.35, w:5.9, h:3.7, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
+    s2.addText(aiData.executiveSummary || "", { x:0.7, y:1.5, w:5.5, h:3.4, fontSize:13, color:GREY, valign:"top", wrap:true });
+    s2.addShape(pres.shapes.RECTANGLE, { x:6.65, y:1.35, w:3.0, h:3.7, fill:{ color: NAVY }, line:{ color: NAVY }, shadow: mkShadow() });
+    s2.addText("KEY THEMES", { x:6.75, y:1.5, w:2.8, h:0.4, fontSize:10, bold:true, color:GOLD, charSpacing:3 });
+    const themes = aiData.themes || [];
+    themes.forEach((t, i) => {
+      s2.addShape(pres.shapes.RECTANGLE, { x:6.75, y:2.05 + i*1.0, w:2.8, h:0.82, fill:{ color:"1e56a8" }, line:{ color:"1e56a8" } });
+      s2.addText(`${i+1}. ${t}`, { x:6.85, y:2.1 + i*1.0, w:2.6, h:0.72, fontSize:11, color:WHITE, wrap:true, valign:"middle" });
+    });
+
+    // ── SLIDE 3: Behavioural Shifts ─────────────────────────────────────────
+    if (aiData.behaviouralShifts && aiData.behaviouralShifts.length > 0) {
+      let s3 = pres.addSlide();
+      s3.background = { color: "F4F6FB" };
+      s3.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:1.05, fill:{ color: DARK }, line:{ color: DARK } });
+      s3.addShape(pres.shapes.RECTANGLE, { x:0, y:1.05, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
+      s3.addText("BEHAVIOURAL SHIFTS REQUIRED", { x:0.5, y:0.22, w:9, h:0.6, fontSize:22, bold:true, color:WHITE });
+      aiData.behaviouralShifts.forEach((shift, i) => {
+        const yy = 1.35 + i * 1.25;
+        s3.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:9.0, h:1.0, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
+        s3.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:0.07, h:1.0, fill:{ color: GOLD }, line:{ color: GOLD } });
+        s3.addText(`${i+1}`, { x:0.65, y:yy+0.1, w:0.5, h:0.5, fontSize:18, bold:true, color:NAVY });
+        s3.addText(shift, { x:1.2, y:yy+0.1, w:8.1, h:0.8, fontSize:12, color:GREY, wrap:true, valign:"middle" });
       });
+    }
 
-      // Slide 3: Group Summaries
-      let slide3 = pres.addSlide();
-      slide3.addText("Group Summaries (At a Glance)", { x: 0.5, y: 0.5, w: 9, h: 0.8, fontSize: 28, color: "17468B", bold: true });
-      let yPos = 1.5;
-      for(let i=1; i<=session.numGroups; i++) {
-        const g = groups[i];
-        if(g && g.summaries && g.summaries.phase3) {
-          slide3.addText(`Group ${i}:`, { x: 0.5, y: yPos, w: 1.5, h: 0.5, fontSize: 14, color: "FAB41E", bold: true });
-          slide3.addText(g.summaries.phase3, { x: 2.0, y: yPos, w: 7.5, h: 0.5, fontSize: 12, color: "333333" });
-          yPos += 0.8;
+    // ── SLIDE 4: Priority Actions ───────────────────────────────────────────
+    if (aiData.priorityActions && aiData.priorityActions.length > 0) {
+      let s4 = pres.addSlide();
+      s4.background = { color: "F4F6FB" };
+      s4.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:1.05, fill:{ color: NAVY }, line:{ color: NAVY } });
+      s4.addShape(pres.shapes.RECTANGLE, { x:0, y:1.05, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
+      s4.addText("PRIORITY ACTIONS", { x:0.5, y:0.22, w:9, h:0.6, fontSize:22, bold:true, color:WHITE });
+      const colors = [GOLD, "27a060", NAVY];
+      aiData.priorityActions.forEach((action, i) => {
+        const yy = 1.35 + i * 1.25;
+        s4.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:0.9, h:1.0, fill:{ color: colors[i]||NAVY }, line:{ color: colors[i]||NAVY } });
+        s4.addText(`0${i+1}`, { x:0.5, y:yy+0.2, w:0.9, h:0.6, fontSize:24, bold:true, color:WHITE, align:"center" });
+        s4.addShape(pres.shapes.RECTANGLE, { x:1.5, y:yy, w:8.0, h:1.0, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
+        s4.addText(action, { x:1.65, y:yy+0.1, w:7.7, h:0.8, fontSize:12, color:GREY, wrap:true, valign:"middle" });
+      });
+    }
+
+    // ── SLIDE 5: Group Insights ─────────────────────────────────────────────
+    if (aiData.groupInsights) {
+      let s5 = pres.addSlide();
+      s5.background = { color: "F4F6FB" };
+      s5.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:1.05, fill:{ color: DARK }, line:{ color: DARK } });
+      s5.addShape(pres.shapes.RECTANGLE, { x:0, y:1.05, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
+      s5.addText("GROUP INSIGHTS", { x:0.5, y:0.22, w:9, h:0.6, fontSize:22, bold:true, color:WHITE });
+      s5.addShape(pres.shapes.RECTANGLE, { x:0.5, y:1.35, w:4.4, h:3.7, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
+      s5.addShape(pres.shapes.RECTANGLE, { x:0.5, y:1.35, w:4.4, h:0.45, fill:{ color: NAVY }, line:{ color: NAVY } });
+      s5.addText("WHAT ALL GROUPS AGREED", { x:0.6, y:1.42, w:4.2, h:0.3, fontSize:9, bold:true, color:GOLD, charSpacing:2 });
+      s5.addText(aiData.groupInsights.common || "", { x:0.65, y:1.9, w:4.1, h:2.9, fontSize:12, color:GREY, wrap:true, valign:"top" });
+      s5.addShape(pres.shapes.RECTANGLE, { x:5.1, y:1.35, w:4.4, h:3.7, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
+      s5.addShape(pres.shapes.RECTANGLE, { x:5.1, y:1.35, w:4.4, h:0.45, fill:{ color: DARK }, line:{ color: DARK } });
+      s5.addText("WHERE GROUPS DIVERGED", { x:5.2, y:1.42, w:4.2, h:0.3, fontSize:9, bold:true, color:GOLD, charSpacing:2 });
+      s5.addText(aiData.groupInsights.divergence || "", { x:5.25, y:1.9, w:4.1, h:2.9, fontSize:12, color:GREY, wrap:true, valign:"top" });
+    }
+
+    // ── SLIDES 6+: One slide per group — full phase responses ───────────────
+    for (let i = 1; i <= session.numGroups; i++) {
+      const g = groups[i];
+      if (!g) continue;
+
+      // Group cover
+      let gc = pres.addSlide();
+      gc.background = { color: NAVY };
+      gc.addShape(pres.shapes.RECTANGLE, { x:0, y:4.72, w:10, h:0.08, fill:{ color: GOLD }, line:{ color: GOLD } });
+      gc.addText(`GROUP ${i}`, { x:0.6, y:1.5, w:8.8, h:0.6, fontSize:13, bold:true, color:GOLD, charSpacing:6 });
+      gc.addText("Full Phase Responses", { x:0.6, y:2.2, w:8.8, h:1.0, fontSize:36, bold:true, color:WHITE });
+      gc.addText(session.sessionName, { x:0.6, y:3.3, w:8.8, h:0.4, fontSize:13, color:"8aaad4" });
+
+      // Phase 1
+      if (g.phase1 && Object.values(g.phase1).some(v=>v)) {
+        let sp1 = pres.addSlide();
+        sp1.background = { color: "F4F6FB" };
+        sp1.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color: NAVY }, line:{ color: NAVY } });
+        sp1.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color: GOLD }, line:{ color: GOLD } });
+        sp1.addText(`Group ${i}  ·  Phase 1: Current State`, { x:0.5, y:0.15, w:9, h:0.6, fontSize:18, bold:true, color:WHITE });
+        let yy = 1.1;
+        OPM.forEach(el => {
+          const val = g.phase1[el.key];
+          if (!val) return;
+          sp1.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:9.0, h:0.65, fill:{ color: WHITE }, line:{ color:"dde5f0" } });
+          sp1.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:0.06, h:0.65, fill:{ color: GOLD }, line:{ color: GOLD } });
+          sp1.addText(el.label, { x:0.68, y:yy+0.04, w:2.2, h:0.25, fontSize:9, bold:true, color:NAVY });
+          sp1.addText(val, { x:0.68, y:yy+0.28, w:8.6, h:0.3, fontSize:10, color:GREY, wrap:true });
+          yy += 0.72;
+        });
+      }
+
+      // Phase 2
+      if (g.phase2 && g.phase2.headline) {
+        let sp2 = pres.addSlide();
+        sp2.background = { color: "F4F6FB" };
+        sp2.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color: DARK }, line:{ color: DARK } });
+        sp2.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color: GOLD }, line:{ color: GOLD } });
+        sp2.addText(`Group ${i}  ·  Phase 2: Newspaper 2027`, { x:0.5, y:0.15, w:9, h:0.6, fontSize:18, bold:true, color:WHITE });
+        sp2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:1.1, w:9.0, h:1.0, fill:{ color: NAVY }, line:{ color: NAVY }, shadow: mkShadow() });
+        sp2.addText("HEADLINE", { x:0.7, y:1.15, w:2, h:0.3, fontSize:8, bold:true, color:GOLD, charSpacing:3 });
+        sp2.addText(g.phase2.headline, { x:0.7, y:1.42, w:8.6, h:0.55, fontSize:16, bold:true, color:WHITE, wrap:true });
+        const actions = [g.phase2.action1, g.phase2.action2, g.phase2.action3].filter(Boolean);
+        actions.forEach((a, idx) => {
+          const ay = 2.3 + idx * 0.72;
+          sp2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:ay, w:9.0, h:0.62, fill:{ color: WHITE }, line:{ color:"dde5f0" } });
+          sp2.addText(`Action ${idx+1}`, { x:0.68, y:ay+0.04, w:1.5, h:0.22, fontSize:8, bold:true, color:NAVY });
+          sp2.addText(a, { x:0.68, y:ay+0.26, w:8.6, h:0.3, fontSize:10, color:GREY, wrap:true });
+        });
+        if (g.phase2.frontlineQuote) {
+          sp2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:4.4, w:9.0, h:0.9, fill:{ color: LIGHT }, line:{ color:"dde5f0" } });
+          sp2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:4.4, w:0.06, h:0.9, fill:{ color: GOLD }, line:{ color: GOLD } });
+          sp2.addText(`"${g.phase2.frontlineQuote}"`, { x:0.7, y:4.45, w:8.6, h:0.8, fontSize:11, italic:true, color:GREY, wrap:true });
         }
       }
 
-      await pres.writeFile({ fileName: `Culture_Gap_Report_${session.code}.pptx` });
-    } catch (e) { alert("Failed to generate PPTX. Please try again."); }
-    setGeneratingPPT(false);
-  };
+      // Phase 3
+      if (g.phase3 && Object.values(g.phase3).some(v=>v)) {
+        let sp3 = pres.addSlide();
+        sp3.background = { color: "F4F6FB" };
+        sp3.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color: NAVY }, line:{ color: NAVY } });
+        sp3.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color: GOLD }, line:{ color: GOLD } });
+        sp3.addText(`Group ${i}  ·  Phase 3: 2027 Vision Mapping`, { x:0.5, y:0.15, w:9, h:0.6, fontSize:18, bold:true, color:WHITE });
+        let yy = 1.1;
+        OPM.forEach(el => {
+          const val = g.phase3[el.key];
+          if (!val || val.toLowerCase().includes("not addressed")) return;
+          sp3.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:9.0, h:0.65, fill:{ color: WHITE }, line:{ color:"dde5f0" } });
+          sp3.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:0.06, h:0.65, fill:{ color: GOLD }, line:{ color: GOLD } });
+          sp3.addText(el.label, { x:0.68, y:yy+0.04, w:2.2, h:0.25, fontSize:9, bold:true, color:NAVY });
+          sp3.addText(val, { x:0.68, y:yy+0.28, w:8.6, h:0.3, fontSize:10, color:GREY, wrap:true });
+          yy += 0.72;
+        });
+      }
+
+      // Phase 4
+      if (g.phase4 && Object.values(g.phase4).some(v=>v)) {
+        let sp4 = pres.addSlide();
+        sp4.background = { color: "F4F6FB" };
+        sp4.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color: DARK }, line:{ color: DARK } });
+        sp4.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color: GOLD }, line:{ color: GOLD } });
+        sp4.addText(`Group ${i}  ·  Phase 4: Roadblocks`, { x:0.5, y:0.15, w:9, h:0.6, fontSize:18, bold:true, color:WHITE });
+        const blocks = [g.phase4.r1, g.phase4.r2, g.phase4.r3].filter(Boolean);
+        blocks.forEach((b, idx) => {
+          const by = 1.2 + idx * 1.2;
+          sp4.addShape(pres.shapes.RECTANGLE, { x:0.5, y:by, w:0.85, h:1.0, fill:{ color:"C0392B" }, line:{ color:"C0392B" } });
+          sp4.addText(`${idx+1}`, { x:0.5, y:by+0.2, w:0.85, h:0.6, fontSize:24, bold:true, color:WHITE, align:"center" });
+          sp4.addShape(pres.shapes.RECTANGLE, { x:1.45, y:by, w:8.05, h:1.0, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
+          sp4.addText(b, { x:1.6, y:by+0.15, w:7.75, h:0.7, fontSize:13, color:GREY, wrap:true, valign:"middle" });
+        });
+
+        // AI summary for this group if available
+        if (g.summaries?.phase4) {
+          sp4.addShape(pres.shapes.RECTANGLE, { x:0.5, y:4.7, w:9.0, h:0.65, fill:{ color: LIGHT }, line:{ color:"dde5f0" } });
+          sp4.addShape(pres.shapes.RECTANGLE, { x:0.5, y:4.7, w:0.06, h:0.65, fill:{ color: NAVY }, line:{ color: NAVY } });
+          sp4.addText(`AI Summary: ${g.summaries.phase4}`, { x:0.68, y:4.75, w:8.7, h:0.55, fontSize:9, italic:true, color:GREY, wrap:true });
+        }
+      }
+    }
+
+    // ── Final slide ─────────────────────────────────────────────────────────
+    let sf = pres.addSlide();
+    sf.background = { color: DARK };
+    sf.addShape(pres.shapes.RECTANGLE, { x:0, y:2.4, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
+    sf.addText("Thank You", { x:0.6, y:1.1, w:8.8, h:1.1, fontSize:48, bold:true, color:WHITE, align:"center" });
+    sf.addText("This document is confidential and prepared exclusively for internal use.", { x:1, y:2.7, w:8, h:0.6, fontSize:12, color:"8aaad4", align:"center", italic:true });
+    sf.addText("Carnelian Co  ·  carnelianco.com", { x:1, y:3.4, w:8, h:0.5, fontSize:12, color:GOLD, align:"center" });
+
+    await pres.writeFile({ fileName: `Culture_Gap_Report_${session.code}.pptx` });
+  } catch (e) {
+    console.error("PPTX Error:", e);
+    alert("Failed to generate PPTX. Please try again.");
+  }
+  setGeneratingPPT(false);
+};
 
   return (
     <Box>
@@ -782,6 +946,7 @@ function Report({ session, groups, onClose }) {
           <Typography sx={{ color:"#4A6080" }}>Session {session.code} · {today} · {session.numGroups} groups</Typography>
         </Box>
 
+        {/* ── OPM Gap View (existing) ── */}
         {elements.map(el=>(
           <Box key={el.key} sx={{ mb:4, pb:4, borderBottom:`1px solid rgba(23,70,139,0.12)` }}>
             <Box sx={{ display:"flex", alignItems:"center", mb:2.5, gap:2 }}>
@@ -801,8 +966,154 @@ function Report({ session, groups, onClose }) {
             </Grid>
           </Box>
         ))}
-        <Box sx={{ textAlign:"center", pt:3, borderTop:`1px solid rgba(23,70,139,0.12)` }}><Typography variant="caption" sx={{ color:"#9bb0cc" }}>Generated by Carnelian Co · carnelianco.com · Confidential</Typography></Box>
-      </Box>
+
+        {/* ── Full Group Responses by Phase ── */}
+        <Box sx={{ mt:6, mb:2 }}>
+          <Box sx={{ display:"flex", alignItems:"center", gap:2, mb:1 }}>
+            <Box sx={{ width:6, height:36, background:`linear-gradient(${BAT_NAVY},${BAT_GOLD})`, borderRadius:3 }}/>
+            <Typography variant="h4" sx={{ fontWeight:800, color:BAT_DARK }}>Full Group Responses</Typography>
+          </Box>
+          <Typography variant="body2" sx={{ color:"#4A6080", mb:3 }}>Every group · every phase · complete input</Typography>
+        </Box>
+
+        {Array.from({ length: session.numGroups }, (_, i) => i + 1).map(n => {
+          const g = groups[n];
+          if (!g) return null;
+          return (
+            <Box key={n} sx={{ mb:5, pb:5, borderBottom:`2px solid rgba(23,70,139,0.12)` }}>
+              {/* Group Header */}
+              <Box sx={{ background:`linear-gradient(135deg,${BAT_DARK},${BAT_NAVY})`, borderRadius:1, px:3, py:2, mb:3, display:"flex", alignItems:"center", gap:2 }}>
+                <Box sx={{ width:44, height:44, borderRadius:1, background:BAT_GOLD, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <Typography sx={{ fontWeight:900, fontSize:"1.2rem", color:BAT_DARK }}>G{n}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="overline" sx={{ color:BAT_GOLD, display:"block", lineHeight:1 }}>Group {n}</Typography>
+                  <Typography variant="h6" sx={{ color:"#fff", fontWeight:800 }}>{session.sessionName}</Typography>
+                </Box>
+              </Box>
+
+              {/* Phase 1 */}
+              {g.phase1 && Object.values(g.phase1).some(v=>v) && (
+                <Box sx={{ mb:3 }}>
+                  <Box sx={{ px:2, py:1, background:BAT_NAVY, borderRadius:1, mb:1.5, display:"inline-block" }}>
+                    <Typography variant="overline" sx={{ color:BAT_GOLD, fontWeight:700 }}>Phase 1 — Current State</Typography>
+                  </Box>
+                  <Grid container spacing={1.5}>
+                    {OPM.map(el => g.phase1[el.key] ? (
+                      <Grid item xs={12} sm={6} key={el.key}>
+                        <Box sx={{ p:2, border:`1px solid rgba(23,70,139,0.12)`, borderRadius:1, height:"100%", background:"#fff" }}>
+                          <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>{el.label}</Typography>
+                          <Typography variant="body2" sx={{ color:"#2a3a50", lineHeight:1.6 }}>{g.phase1[el.key]}</Typography>
+                        </Box>
+                      </Grid>
+                    ) : null)}
+                  </Grid>
+                  {g.summaries?.phase1 && (
+                    <Box sx={{ mt:1.5, p:2, background:BAT_LIGHT, borderLeft:`3px solid ${BAT_NAVY}`, borderRadius:1 }}>
+                      <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>AI Summary</Typography>
+                      <Typography variant="body2" sx={{ color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6 }}>{g.summaries.phase1}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+              {/* Phase 2 */}
+              {g.phase2 && g.phase2.headline && (
+                <Box sx={{ mb:3 }}>
+                  <Box sx={{ px:2, py:1, background:BAT_DARK, borderRadius:1, mb:1.5, display:"inline-block" }}>
+                    <Typography variant="overline" sx={{ color:BAT_GOLD, fontWeight:700 }}>Phase 2 — Newspaper 2027</Typography>
+                  </Box>
+                  <Paper elevation={1} sx={{ overflow:"hidden" }}>
+                    <Box sx={{ background:`linear-gradient(135deg,${BAT_DARK},${BAT_NAVY})`, px:2.5, py:2, borderBottom:`3px solid ${BAT_GOLD}` }}>
+                      <Typography variant="overline" sx={{ color:BAT_GOLD, display:"block", mb:0.5, fontSize:"0.6rem" }}>Headline</Typography>
+                      <Typography variant="h6" sx={{ color:"#fff", fontWeight:800, lineHeight:1.3 }}>{g.phase2.headline}</Typography>
+                    </Box>
+                    <Box sx={{ p:2.5 }}>
+                      <Grid container spacing={2}>
+                        {["action1","action2","action3"].map((k,i) => g.phase2[k] ? (
+                          <Grid item xs={12} sm={4} key={k}>
+                            <Box sx={{ p:1.5, background:BAT_LIGHT, borderRadius:1, height:"100%" }}>
+                              <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>Action {i+1}</Typography>
+                              <Typography variant="body2" sx={{ color:"#2a3a50", lineHeight:1.6 }}>{g.phase2[k]}</Typography>
+                            </Box>
+                          </Grid>
+                        ) : null)}
+                      </Grid>
+                      {g.phase2.frontlineQuote && (
+                        <Box sx={{ mt:2, p:2, background:"#fffbea", borderLeft:`3px solid ${BAT_GOLD}`, borderRadius:1 }}>
+                          <Typography variant="overline" sx={{ color:"#8a5900", display:"block", mb:0.5, fontSize:"0.6rem" }}>Frontline Voice</Typography>
+                          <Typography variant="body2" sx={{ color:"#5a4000", lineHeight:1.6, fontStyle:"italic" }}>"{g.phase2.frontlineQuote}"</Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Paper>
+                  {g.summaries?.phase2 && (
+                    <Box sx={{ mt:1.5, p:2, background:BAT_LIGHT, borderLeft:`3px solid ${BAT_NAVY}`, borderRadius:1 }}>
+                      <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>AI Summary</Typography>
+                      <Typography variant="body2" sx={{ color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6 }}>{g.summaries.phase2}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+              {/* Phase 3 */}
+              {g.phase3 && Object.values(g.phase3).some(v=>v) && (
+                <Box sx={{ mb:3 }}>
+                  <Box sx={{ px:2, py:1, background:BAT_NAVY, borderRadius:1, mb:1.5, display:"inline-block" }}>
+                    <Typography variant="overline" sx={{ color:BAT_GOLD, fontWeight:700 }}>Phase 3 — 2027 Vision Mapping</Typography>
+                  </Box>
+                  <Grid container spacing={1.5}>
+                    {OPM.map(el => {
+                      const val = g.phase3[el.key];
+                      if (!val || val.toLowerCase().includes("not addressed")) return null;
+                      return (
+                        <Grid item xs={12} sm={6} key={el.key}>
+                          <Box sx={{ p:2, border:`1px solid rgba(250,180,30,0.3)`, borderRadius:1, height:"100%", background:"#fffbea" }}>
+                            <Typography variant="overline" sx={{ color:"#8a5900", display:"block", mb:0.5, fontSize:"0.6rem" }}>{el.label}</Typography>
+                            <Typography variant="body2" sx={{ color:"#2a3a50", lineHeight:1.6 }}>{val}</Typography>
+                          </Box>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                  {g.summaries?.phase3 && (
+                    <Box sx={{ mt:1.5, p:2, background:BAT_LIGHT, borderLeft:`3px solid ${BAT_NAVY}`, borderRadius:1 }}>
+                      <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>AI Summary</Typography>
+                      <Typography variant="body2" sx={{ color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6 }}>{g.summaries.phase3}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+              {/* Phase 4 */}
+              {g.phase4 && Object.values(g.phase4).some(v=>v) && (
+                <Box sx={{ mb:2 }}>
+                  <Box sx={{ px:2, py:1, background:"#C0392B", borderRadius:1, mb:1.5, display:"inline-block" }}>
+                    <Typography variant="overline" sx={{ color:"#fff", fontWeight:700 }}>Phase 4 — Roadblocks</Typography>
+                  </Box>
+                  <Stack spacing={1}>
+                    {["r1","r2","r3"].map((k,i) => g.phase4[k] ? (
+                      <Box key={k} sx={{ display:"flex", gap:2, p:2, background:"#fff", border:`1px solid rgba(192,57,43,0.2)`, borderRadius:1 }}>
+                        <Box sx={{ width:32, height:32, borderRadius:1, background:"#C0392B", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <Typography sx={{ color:"#fff", fontWeight:900, fontSize:"0.9rem" }}>{i+1}</Typography>
+                        </Box>
+                        <Typography variant="body2" sx={{ color:"#2a3a50", lineHeight:1.6, pt:0.5 }}>{g.phase4[k]}</Typography>
+                      </Box>
+                    ) : null)}
+                  </Stack>
+                  {g.summaries?.phase4 && (
+                    <Box sx={{ mt:1.5, p:2, background:BAT_LIGHT, borderLeft:`3px solid ${BAT_NAVY}`, borderRadius:1 }}>
+                      <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>AI Summary</Typography>
+                      <Typography variant="body2" sx={{ color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6 }}>{g.summaries.phase4}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
+          );
+        })}
+
+        <Box sx={{ textAlign:"center", pt:3, borderTop:`1px solid rgba(23,70,139,0.12)` }}><Typography variant="caption" sx={{ color:"#9bb0cc" }}>Generated by Carnelian Co · carnelianco.com · Confidential</Typography></Box></Box>
       <style>{`@media print { .no-print { display:none !important; } body { background:#fff; } @page { margin:0.6in; } }`}</style>
     </Box>
   );
