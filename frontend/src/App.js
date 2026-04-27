@@ -744,8 +744,15 @@ const handlePPTX = async () => {
     // helper — extract bullet lines from AI text
     const bullets = (t="", max=6) => {
       const lines = t.split("\n")
-        .map(l => l.replace(/^[•\-\*\d\.]+\s*/, "").replace(/\*\*(.+?)\*\*/g,"$1").trim())
-        .filter(l => l.length > 10 && l.length < 200);
+        .map(l => l
+          .replace(/^#{1,4}\s*/,"")           // strip ## headers
+          .replace(/^[•\-\*\d\.]+\s*/,"")     // strip bullets/numbers
+          .replace(/\*\*(.+?)\*\*/g,"$1")     // strip bold
+          .replace(/\*(.+?)\*/g,"$1")         // strip italic
+          .replace(/^(Current State Summary|Common Themes|Problematic Behaviours|Key Cultural|Transformation Priorities|Bottom Line).*/i,"") // strip section headers
+          .trim()
+        )
+        .filter(l => l.length > 15 && l.length < 220 && !l.match(/^#+/) && !l.includes("---"));
       return lines.slice(0, max);
     };
 
@@ -790,10 +797,9 @@ const handlePPTX = async () => {
     s2.addText("KEY THEMES", { x:6.5, y:1.22, w:3.0, h:0.3, fontSize:9, bold:true, color:GOLD, charSpacing:3 });
     themes.forEach((t, i) => {
       const tPlain = plain(t);
-      const tShort = tPlain.length > 100 ? tPlain.substring(0,97)+"…" : tPlain;
-      s2.addShape(pres.shapes.RECTANGLE, { x:6.5, y:1.65+i*1.15, w:3.0, h:1.0, fill:{ color:"1e56a8" }, line:{ color:"1e56a8" } });
-      s2.addText(`${i+1}`, { x:6.55, y:1.68+i*1.15, w:0.35, h:0.3, fontSize:10, bold:true, color:GOLD });
-      s2.addText(tShort, { x:6.9, y:1.66+i*1.15, w:2.5, h:0.96, fontSize:10, color:WHITE, wrap:true, valign:"middle" });
+      s2.addShape(pres.shapes.RECTANGLE, { x:6.5, y:1.62+i*1.18, w:3.0, h:1.08, fill:{ color:"1e56a8" }, line:{ color:"1e56a8" } });
+      s2.addText(`${i+1}`, { x:6.55, y:1.65+i*1.18, w:0.3, h:0.28, fontSize:9, bold:true, color:GOLD });
+      s2.addText(tPlain, { x:6.85, y:1.63+i*1.18, w:2.55, h:1.04, fontSize:9, color:WHITE, wrap:true, valign:"middle", shrinkText:true });
     });
 
     // ── SLIDE 3: Behavioural Shifts ─────────────────────────────────────────
@@ -873,36 +879,44 @@ const handlePPTX = async () => {
     }
 
     // ── SLIDE 6: OPM Gap Overview ───────────────────────────────────────────
+   // ── SLIDE 6: OPM Gap Overview — AI gap summary per element ─────────────
     let s6 = pres.addSlide();
     s6.background = { color:"F4F6FB" };
     s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:NAVY }, line:{ color:NAVY } });
     s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
-    s6.addText("THE GAP — 6 DESIGN ELEMENTS", { x:0.5, y:0.18, w:9, h:0.55, fontSize:20, bold:true, color:WHITE });
-    s6.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.05, w:4.5, h:0.35, fill:{ color:LIGHT }, line:{ color:LIGHT } });
-    s6.addText("TODAY", { x:0.4, y:1.1, w:4.5, h:0.25, fontSize:9, bold:true, color:NAVY, align:"center", charSpacing:3 });
-    s6.addShape(pres.shapes.RECTANGLE, { x:5.1, y:1.05, w:4.5, h:0.35, fill:{ color:"fffbea" }, line:{ color:"fffbea" } });
-    s6.addText("2027 VISION", { x:5.1, y:1.1, w:4.5, h:0.25, fontSize:9, bold:true, color:"8a5900", align:"center", charSpacing:3 });
-    OPM.forEach((el, i) => {
-      const yy = 1.5 + i * 0.67;
-      s6.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:4.5, h:0.58, fill:{ color:WHITE }, line:{ color:"dde5f0" } });
-      s6.addText(el.label, { x:0.5, y:yy+0.03, w:1.3, h:0.2, fontSize:8, bold:true, color:NAVY });
-      // collect today responses
-      const todayVals = [];
-      for (let n=1; n<=session.numGroups; n++) {
-        const v = groups[n]?.phase1?.[el.key];
-        if (v) todayVals.push(`G${n}: ${v}`);
-      }
-      const todayStr = todayVals.join("  |  ");
-      s6.addText(todayStr || "—", { x:0.5, y:yy+0.25, w:4.3, h:0.28, fontSize:9, color:GREY, wrap:true });
+    s6.addText("THE TRANSFORMATION GAP — 6 DESIGN ELEMENTS", { x:0.5, y:0.18, w:9, h:0.55, fontSize:18, bold:true, color:WHITE });
 
-      s6.addShape(pres.shapes.RECTANGLE, { x:5.1, y:yy, w:4.5, h:0.58, fill:{ color:"fffef5" }, line:{ color:"f0e5b0" } });
-      const futureVals = [];
+    // Build a combined today/future string per element for AI to summarise
+    const gapSummaries = {};
+    for (const el of OPM) {
+      const todayLines = [], futureLines = [];
       for (let n=1; n<=session.numGroups; n++) {
-        const v = groups[n]?.phase3?.[el.key];
-        if (v && !v.toLowerCase().includes("not addressed")) futureVals.push(`G${n}: ${v}`);
+        const tv = groups[n]?.phase1?.[el.key]; if (tv) todayLines.push(`G${n}: ${tv}`);
+        const fv = groups[n]?.phase3?.[el.key]; if (fv && !fv.toLowerCase().includes("not addressed")) futureLines.push(`G${n}: ${fv}`);
       }
-      const futureStr = futureVals.join("  |  ");
-      s6.addText(futureStr || "—", { x:5.2, y:yy+0.04, w:4.3, h:0.5, fontSize:9, color:"5a4000", wrap:true });
+      if (!todayLines.length && !futureLines.length) { gapSummaries[el.key] = { today:"No data", future:"No data", gap:"No data provided." }; continue; }
+      try {
+        const prompt = `Element: ${el.label}\nTODAY (problems): ${todayLines.join(" | ")}\n2027 VISION: ${futureLines.join(" | ")}\n\nIn exactly 2 short bullet points: what is the core gap between today and 2027 for this element? Each bullet max 15 words. No headers, no preamble, just the 2 bullets starting with •`;
+        const r = await fetch(`${API_URL}/ai/nudge`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ system:"You are a concise organisational analyst. Return only bullet points, no other text.", user: prompt }) });
+        const d = await r.json();
+        gapSummaries[el.key] = d.text || "Gap analysis unavailable.";
+      } catch { gapSummaries[el.key] = "Gap analysis unavailable."; }
+    }
+
+    OPM.forEach((el, i) => {
+      const yy = 1.05 + i * 0.75;
+      const gapText = typeof gapSummaries[el.key] === "string"
+        ? gapSummaries[el.key].replace(/^[•\-\*] /gm,"").trim()
+        : "No data.";
+      const gapLines = gapText.split("\n").filter(l=>l.trim()).slice(0,2);
+
+      s6.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:2.2, h:0.62, fill:{ color:NAVY }, line:{ color:NAVY } });
+      s6.addText(el.label, { x:0.5, y:yy+0.18, w:2.0, h:0.28, fontSize:11, bold:true, color:WHITE, align:"center" });
+
+      s6.addShape(pres.shapes.RECTANGLE, { x:2.7, y:yy, w:7.0, h:0.62, fill:{ color:WHITE }, line:{ color:"dde5f0" } });
+      s6.addShape(pres.shapes.RECTANGLE, { x:2.7, y:yy, w:0.05, h:0.62, fill:{ color:GOLD }, line:{ color:GOLD } });
+      const gapItems = gapLines.map((l,idx)=>({ text:l.replace(/^[•\-\*]\s*/,""), options:{ bullet:true, breakLine:idx<gapLines.length-1, fontSize:10, color:GREY, paraSpaceAfter:2 } }));
+      s6.addText(gapItems.length ? gapItems : [{ text:"Gap data not available", options:{ fontSize:10, color:GREY } }], { x:2.85, y:yy+0.06, w:6.7, h:0.52 });
     });
 
     // ── SLIDES 7+: Per-group AI summary slides (NO raw responses) ───────────
@@ -952,12 +966,27 @@ const handlePPTX = async () => {
 
         // Bullet insights
         if (blist.length) {
-          ps.addText("KEY INSIGHTS", { x:0.5, y:2.05, w:4, h:0.28, fontSize:9, bold:true, color:NAVY, charSpacing:2 });
-          const items = blist.map((l, idx) => ({
-            text: l,
-            options:{ bullet:true, breakLine: idx<blist.length-1, fontSize:11, color:GREY, paraSpaceAfter:5 }
+          // Split bullets: first 3 = insights, rest = actionable steps
+          const insightBullets = blist.slice(0,3);
+          const actionBullets  = blist.slice(3,6);
+
+          // Left column — Key Insights
+          ps.addText("KEY INSIGHTS", { x:0.5, y:2.05, w:4.5, h:0.28, fontSize:9, bold:true, color:NAVY, charSpacing:2 });
+          const insightItems = insightBullets.map((l,idx)=>({
+            text:l, options:{ bullet:true, breakLine:idx<insightBullets.length-1, fontSize:11, color:GREY, paraSpaceAfter:6 }
           }));
-          ps.addText(items, { x:0.5, y:2.38, w:9.0, h:2.9 });
+          ps.addText(insightItems, { x:0.5, y:2.38, w:4.5, h:2.8 });
+
+          // Right column — Actionable Steps (from AI or derived)
+          if (actionBullets.length) {
+            ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:3.3, fill:{ color:"fffbea" }, line:{ color:"f0e0a0" } });
+            ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:0.35, fill:{ color:GOLD }, line:{ color:GOLD } });
+            ps.addText("ACTIONABLE STEPS", { x:5.3, y:2.06, w:4.2, h:0.22, fontSize:8, bold:true, color:DARK, charSpacing:2 });
+            const actionItems = actionBullets.map((l,idx)=>({
+              text:l, options:{ bullet:true, breakLine:idx<actionBullets.length-1, fontSize:11, color:"5a4000", paraSpaceAfter:6 }
+            }));
+            ps.addText(actionItems, { x:5.3, y:2.42, w:4.2, h:2.7 });
+          }
         }
       });
     }
