@@ -840,14 +840,15 @@ const handlePPTX = async () => {
         const dashIdx = ap.indexOf(" — ");
         const label  = dashIdx > -1 ? ap.substring(0, dashIdx) : ap;
         const reason = dashIdx > -1 ? ap.substring(dashIdx+3) : "";
-        const labelShort  = label.length  > 80  ? label.substring(0,77)+"…"  : label;
-        const reasonShort = reason.length > 120 ? reason.substring(0,117)+"…" : reason;
+        
         const yy = 1.05 + i*1.45;
         s4.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:1.0, h:1.25, fill:{ color:aColors[i]||NAVY }, line:{ color:aColors[i]||NAVY } });
         s4.addText(`0${i+1}`, { x:0.4, y:yy+0.35, w:1.0, h:0.55, fontSize:22, bold:true, color:WHITE, align:"center" });
         s4.addShape(pres.shapes.RECTANGLE, { x:1.5, y:yy, w:8.1, h:1.25, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
-        s4.addText(labelShort, { x:1.65, y:yy+0.1, w:7.8, h:0.38, fontSize:12, bold:true, color:DARK, wrap:true });
-        if (reasonShort) s4.addText(reasonShort, { x:1.65, y:yy+0.55, w:7.8, h:0.6, fontSize:10, color:GREY, wrap:true });
+        
+        // Removed the "Short" variables and slightly increased the 'h' (height) to allow for text wrapping
+        s4.addText(label, { x:1.65, y:yy+0.1, w:7.8, h:0.45, fontSize:12, bold:true, color:DARK, wrap:true });
+        if (reason) s4.addText(reason, { x:1.65, y:yy+0.55, w:7.8, h:0.65, fontSize:10, color:GREY, wrap:true });
       });
     }
 
