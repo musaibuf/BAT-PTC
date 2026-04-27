@@ -45,7 +45,6 @@ async function initDB() {
     try {
         await pool.query(createSessionsTable);
         await pool.query(createGroupsTable);
-        // Safely add the summaries column if it doesn't exist yet (for existing databases)
         try { await pool.query(`ALTER TABLE groups ADD COLUMN summaries JSONB DEFAULT '{}'`); } catch(e) {}
         console.log("Database tables verified/created successfully.");
     } catch (err) { console.error("Error initializing database tables:", err); }
@@ -91,7 +90,7 @@ app.get('/api/sessions/:code/groups', async (req, res) => {
         const groups = {};
         result.rows.forEach(g => {
             groups[g.group_number] = {
-                groupNumber: g.group_number, joined: g.joined, phase1: g.phase1, phase2: g.phase2, 
+                groupNumber: g.group_number, joined: g.joined, phase1: g.phase1, phase2: g.phase2,
                 phase3: g.phase3, phase4: g.phase4, phase3AutoMapped: g.phase3_auto_mapped, phase3Reviewed: g.phase3_reviewed, summaries: g.summaries
             };
         });
@@ -105,7 +104,7 @@ app.get('/api/sessions/:code/groups/:num', async (req, res) => {
         if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
         const g = result.rows[0];
         res.json({
-            groupNumber: g.group_number, joined: g.joined, phase1: g.phase1, phase2: g.phase2, 
+            groupNumber: g.group_number, joined: g.joined, phase1: g.phase1, phase2: g.phase2,
             phase3: g.phase3, phase4: g.phase4, phase3AutoMapped: g.phase3_auto_mapped, phase3Reviewed: g.phase3_reviewed, summaries: g.summaries
         });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -125,99 +124,87 @@ app.put('/api/sessions/:code/groups/:num', async (req, res) => {
 });
 
 // --- AI ROUTES ---
-// --- AI ROUTES ---
 app.post('/api/ai/nudge', async (req, res) => {
     try {
-        const msg = await anthropic.messages.create({ 
-            model: "claude-3-5-sonnet-20241022", 
-            max_tokens: 300, 
-            system: req.body.system, 
-            messages: [{ role: "user", content: req.body.user }] 
+        const msg = await anthropic.messages.create({
+            model: "claude-sonnet-4-6",
+            max_tokens: 300,
+            system: req.body.system,
+            messages: [{ role: "user", content: req.body.user }]
         });
         res.json({ text: msg.content[0].text });
-    } catch (err) { 
+    } catch (err) {
         console.error("Nudge Error:", err);
-        res.status(500).json({ error: err.message }); 
+        res.status(500).json({ error: err.message });
     }
 });
 
 app.post('/api/ai/automap', async (req, res) => {
     try {
-        const msg = await anthropic.messages.create({ 
-            model: "claude-3-5-sonnet-20241022", 
-            max_tokens: 1500, 
-            system: req.body.system, 
-            messages: [{ role: "user", content: req.body.user }] 
+        const msg = await anthropic.messages.create({
+            model: "claude-sonnet-4-6",
+            max_tokens: 1500,
+            system: req.body.system,
+            messages: [{ role: "user", content: req.body.user }]
         });
         res.json({ text: msg.content[0].text });
-    } catch (err) { 
+    } catch (err) {
         console.error("Automap Error:", err);
-        res.status(500).json({ error: err.message }); 
+        res.status(500).json({ error: err.message });
     }
 });
 
 app.post('/api/ai/summarize', async (req, res) => {
     try {
-        // Safety check: Don't send empty data to Claude, it causes a 500 error
-        if (!req.body.data || req.body.data.trim() === "" || req.body.data === '"{}"') {
+        console.log("Summarize body received:", req.body); // debug — remove after confirming
+
+        const data = req.body.data;
+
+        // Safety check: reject empty or blank data
+        if (!data || typeof data !== 'string' || data.trim() === "" || data.trim() === '"{}"' || data.trim() === '{}') {
             return res.json({ text: "Not enough data to summarize yet." });
         }
 
+        // Also reject if the data is just an empty JSON object when parsed
+        try {
+            const parsed = JSON.parse(data);
+            if (typeof parsed === 'object' && Object.keys(parsed).length === 0) {
+                return res.json({ text: "Not enough data to summarize yet." });
+            }
+        } catch(e) { /* not JSON, treat as plain text — that's fine */ }
+
         const sys = "You are a corporate facilitator. Summarize the provided group input into exactly ONE short, punchy sentence that captures the core essence. No fluff.";
-        
-        const msg = await anthropic.messages.create({ 
-            model: "claude-3-5-sonnet-20241022", 
-            max_tokens: 500, // Increased to ensure it doesn't cut off
-            system: sys, 
-            messages: [{ role: "user", content: req.body.data }] 
+
+        const msg = await anthropic.messages.create({
+            model: "claude-sonnet-4-6",
+            max_tokens: 500,
+            system: sys,
+            messages: [{ role: "user", content: data }]
         });
-        
+
         res.json({ text: msg.content[0].text });
-    } catch (err) { 
-        console.error("Summarize Error from Anthropic:", err); 
-        res.status(500).json({ error: err.message }); 
+    } catch (err) {
+        console.error("Summarize Error from Anthropic:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 
 app.post('/api/ai/themes', async (req, res) => {
     try {
         const sys = `Analyze this workshop data. Return ONLY valid JSON with two keys: "executiveSummary" (a 3-sentence overall summary of the gap between today and 2027) and "themes" (an array of 3 short strings, each being a major common theme or objective across the groups).`;
-        
-        const msg = await anthropic.messages.create({ 
-            model: "claude-3-5-sonnet-20241022", 
-            max_tokens: 2500, // Massively increased for the final PPTX generation across 5 groups
-            system: sys, 
-            messages: [{ role: "user", content: req.body.data }] 
+
+        const msg = await anthropic.messages.create({
+            model: "claude-sonnet-4-6",
+            max_tokens: 2500,
+            system: sys,
+            messages: [{ role: "user", content: req.body.data }]
         });
-        
+
         res.json({ text: msg.content[0].text });
-    } catch (err) { 
+    } catch (err) {
         console.error("Themes Error:", err);
-        res.status(500).json({ error: err.message }); 
+        res.status(500).json({ error: err.message });
     }
-});
-
-app.post('/api/ai/automap', async (req, res) => {
-    try {
-        const msg = await anthropic.messages.create({ model: "claude-3-5-sonnet-20241022", max_tokens: 700, system: req.body.system, messages: [{ role: "user", content: req.body.user }] });
-        res.json({ text: msg.content[0].text });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/ai/summarize', async (req, res) => {
-    try {
-        const sys = "You are a corporate facilitator. Summarize the provided group input into exactly ONE short, punchy sentence that captures the core essence. No fluff.";
-        const msg = await anthropic.messages.create({ model: "claude-3-5-sonnet-20241022", max_tokens: 150, system: sys, messages: [{ role: "user", content: req.body.data }] });
-        res.json({ text: msg.content[0].text });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/ai/themes', async (req, res) => {
-    try {
-        const sys = `Analyze this workshop data. Return ONLY valid JSON with two keys: "executiveSummary" (a 3-sentence overall summary of the gap between today and 2027) and "themes" (an array of 3 short strings, each being a major common theme or objective across the groups).`;
-        const msg = await anthropic.messages.create({ model: "claude-3-5-sonnet-20241022", max_tokens: 500, system: sys, messages: [{ role: "user", content: req.body.data }] });
-        res.json({ text: msg.content[0].text });
-    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 const PORT = process.env.PORT || 5000;
