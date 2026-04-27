@@ -125,11 +125,76 @@ app.put('/api/sessions/:code/groups/:num', async (req, res) => {
 });
 
 // --- AI ROUTES ---
+// --- AI ROUTES ---
 app.post('/api/ai/nudge', async (req, res) => {
     try {
-        const msg = await anthropic.messages.create({ model: "claude-3-5-sonnet-20241022", max_tokens: 200, system: req.body.system, messages: [{ role: "user", content: req.body.user }] });
+        const msg = await anthropic.messages.create({ 
+            model: "claude-3-5-sonnet-20241022", 
+            max_tokens: 300, 
+            system: req.body.system, 
+            messages: [{ role: "user", content: req.body.user }] 
+        });
         res.json({ text: msg.content[0].text });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) { 
+        console.error("Nudge Error:", err);
+        res.status(500).json({ error: err.message }); 
+    }
+});
+
+app.post('/api/ai/automap', async (req, res) => {
+    try {
+        const msg = await anthropic.messages.create({ 
+            model: "claude-3-5-sonnet-20241022", 
+            max_tokens: 1500, 
+            system: req.body.system, 
+            messages: [{ role: "user", content: req.body.user }] 
+        });
+        res.json({ text: msg.content[0].text });
+    } catch (err) { 
+        console.error("Automap Error:", err);
+        res.status(500).json({ error: err.message }); 
+    }
+});
+
+app.post('/api/ai/summarize', async (req, res) => {
+    try {
+        // Safety check: Don't send empty data to Claude, it causes a 500 error
+        if (!req.body.data || req.body.data.trim() === "" || req.body.data === '"{}"') {
+            return res.json({ text: "Not enough data to summarize yet." });
+        }
+
+        const sys = "You are a corporate facilitator. Summarize the provided group input into exactly ONE short, punchy sentence that captures the core essence. No fluff.";
+        
+        const msg = await anthropic.messages.create({ 
+            model: "claude-3-5-sonnet-20241022", 
+            max_tokens: 500, // Increased to ensure it doesn't cut off
+            system: sys, 
+            messages: [{ role: "user", content: req.body.data }] 
+        });
+        
+        res.json({ text: msg.content[0].text });
+    } catch (err) { 
+        console.error("Summarize Error from Anthropic:", err); 
+        res.status(500).json({ error: err.message }); 
+    }
+});
+
+app.post('/api/ai/themes', async (req, res) => {
+    try {
+        const sys = `Analyze this workshop data. Return ONLY valid JSON with two keys: "executiveSummary" (a 3-sentence overall summary of the gap between today and 2027) and "themes" (an array of 3 short strings, each being a major common theme or objective across the groups).`;
+        
+        const msg = await anthropic.messages.create({ 
+            model: "claude-3-5-sonnet-20241022", 
+            max_tokens: 2500, // Massively increased for the final PPTX generation across 5 groups
+            system: sys, 
+            messages: [{ role: "user", content: req.body.data }] 
+        });
+        
+        res.json({ text: msg.content[0].text });
+    } catch (err) { 
+        console.error("Themes Error:", err);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 app.post('/api/ai/automap', async (req, res) => {
