@@ -716,204 +716,259 @@ function Report({ session, groups, onClose }) {
     return {...el,current,future,addressing};
   });
 
-  const handlePPTX = async () => {
+const handlePPTX = async () => {
   setGeneratingPPT(true);
   try {
     const aiData = await generateThemes(groups);
     let pres = new pptxgen();
     pres.layout = "LAYOUT_16x9";
 
-    const NAVY   = "17468B";
-    const DARK   = "0d2a5a";
-    const GOLD   = "FAB41E";
-    const WHITE  = "FFFFFF";
-    const LIGHT  = "EEF3FB";
-    const GREY   = "4A6080";
-    const mkShadow = () => ({ type:"outer", blur:8, offset:3, angle:135, color:"000000", opacity:0.13 });
+    const NAVY  = "17468B";
+    const DARK  = "0d2a5a";
+    const GOLD  = "FAB41E";
+    const WHITE = "FFFFFF";
+    const LIGHT = "EEF3FB";
+    const GREY  = "4A6080";
+    const mkShadow = () => ({ type:"outer", blur:6, offset:2, angle:135, color:"000000", opacity:0.10 });
+
+    // helper — strip markdown to plain text
+    const plain = (t="") => t
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/^#{1,4} /gm, "")
+      .replace(/^[>•\-\*] /gm, "")
+      .replace(/\|.+\|/g, "")
+      .replace(/---+/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    // helper — extract bullet lines from AI text
+    const bullets = (t="", max=6) => {
+      const lines = t.split("\n")
+        .map(l => l.replace(/^[•\-\*\d\.]+\s*/, "").replace(/\*\*(.+?)\*\*/g,"$1").trim())
+        .filter(l => l.length > 10 && l.length < 200);
+      return lines.slice(0, max);
+    };
 
     // ── SLIDE 1: Title ──────────────────────────────────────────────────────
     let s1 = pres.addSlide();
     s1.background = { color: DARK };
-    s1.addShape(pres.shapes.RECTANGLE, { x:0, y:4.8, w:10, h:0.825, fill:{ color: NAVY }, line:{ color: NAVY } });
-    s1.addShape(pres.shapes.RECTANGLE, { x:0, y:4.72, w:10, h:0.08, fill:{ color: GOLD }, line:{ color: GOLD } });
-    s1.addText("CULTURE GAP ASSESSMENT", { x:0.6, y:1.1, w:8.8, h:0.6, fontSize:13, bold:true, color:GOLD, charSpacing:5 });
-    s1.addText(session.sessionName, { x:0.6, y:1.75, w:8.8, h:1.4, fontSize:42, bold:true, color:WHITE, fontFace:"Calibri" });
-    s1.addText(`${today}  ·  Session ${session.code}  ·  ${session.numGroups} Groups`, { x:0.6, y:3.3, w:8.8, h:0.5, fontSize:14, color:"8aaad4" });
-    s1.addText("Powered by Carnelian Co  ·  Confidential", { x:0.6, y:4.9, w:8.8, h:0.5, fontSize:11, color:"aabbdd", italic:true });
+    s1.addShape(pres.shapes.RECTANGLE, { x:0, y:4.72, w:10, h:0.08, fill:{ color:GOLD }, line:{ color:GOLD } });
+    s1.addShape(pres.shapes.RECTANGLE, { x:0, y:4.8,  w:10, h:0.83, fill:{ color:NAVY }, line:{ color:NAVY } });
+    s1.addText("CULTURE GAP ASSESSMENT", { x:0.6, y:1.0, w:8.8, h:0.5, fontSize:12, bold:true, color:GOLD, charSpacing:5 });
+    s1.addText(session.sessionName, { x:0.6, y:1.55, w:8.8, h:1.3, fontSize:40, bold:true, color:WHITE, fontFace:"Calibri" });
+    s1.addText(`${today}  ·  Session ${session.code}  ·  ${session.numGroups} Groups`, { x:0.6, y:3.0, w:8.8, h:0.45, fontSize:13, color:"8aaad4" });
+    s1.addText("Powered by Carnelian Co  ·  Confidential", { x:0.6, y:4.88, w:8.8, h:0.4, fontSize:10, color:"aabbdd", italic:true });
 
-    // ── SLIDE 2: Executive Summary ──────────────────────────────────────────
+    // ── SLIDE 2: Executive Summary (concise) ────────────────────────────────
     let s2 = pres.addSlide();
-    s2.background = { color: "F4F6FB" };
-    s2.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:1.05, fill:{ color: NAVY }, line:{ color: NAVY } });
-    s2.addShape(pres.shapes.RECTANGLE, { x:0, y:1.05, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
-    s2.addText("EXECUTIVE SUMMARY", { x:0.5, y:0.22, w:9, h:0.6, fontSize:22, bold:true, color:WHITE });
-    s2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:1.35, w:5.9, h:3.7, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
-    s2.addText(aiData.executiveSummary || "", { x:0.7, y:1.5, w:5.5, h:3.4, fontSize:13, color:GREY, valign:"top", wrap:true });
-    s2.addShape(pres.shapes.RECTANGLE, { x:6.65, y:1.35, w:3.0, h:3.7, fill:{ color: NAVY }, line:{ color: NAVY }, shadow: mkShadow() });
-    s2.addText("KEY THEMES", { x:6.75, y:1.5, w:2.8, h:0.4, fontSize:10, bold:true, color:GOLD, charSpacing:3 });
-    const themes = aiData.themes || [];
+    s2.background = { color:"F4F6FB" };
+    s2.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:NAVY }, line:{ color:NAVY } });
+    s2.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
+    s2.addText("EXECUTIVE SUMMARY", { x:0.5, y:0.18, w:9, h:0.55, fontSize:20, bold:true, color:WHITE });
+
+    // Trim executive summary to max 3 sentences
+    const execRaw = plain(aiData.executiveSummary || "");
+    const execSentences = execRaw.match(/[^.!?]+[.!?]+/g) || [execRaw];
+    const execShort = execSentences.slice(0,3).join(" ").trim();
+
+    s2.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.1, w:5.8, h:4.1, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
+    s2.addText(execShort, { x:0.6, y:1.25, w:5.4, h:1.4, fontSize:12, color:GREY, wrap:true, valign:"top" });
+
+    // Key issues bullets from summary
+    const issueLines = bullets(aiData.executiveSummary || "", 4);
+    if (issueLines.length) {
+      s2.addText("KEY FINDINGS", { x:0.6, y:2.75, w:5.4, h:0.3, fontSize:9, bold:true, color:NAVY, charSpacing:2 });
+      const issueItems = issueLines.map((l,idx) => ({
+        text: l, options:{ bullet:true, breakLine: idx < issueLines.length-1, fontSize:11, color:GREY, paraSpaceAfter:4 }
+      }));
+      s2.addText(issueItems, { x:0.6, y:3.1, w:5.4, h:1.8 });
+    }
+
+    // Themes column
+    const themes = (aiData.themes || []).slice(0,3);
+    s2.addShape(pres.shapes.RECTANGLE, { x:6.4, y:1.1, w:3.2, h:4.1, fill:{ color:NAVY }, line:{ color:NAVY }, shadow:mkShadow() });
+    s2.addText("KEY THEMES", { x:6.5, y:1.22, w:3.0, h:0.3, fontSize:9, bold:true, color:GOLD, charSpacing:3 });
     themes.forEach((t, i) => {
-      s2.addShape(pres.shapes.RECTANGLE, { x:6.75, y:2.05 + i*1.0, w:2.8, h:0.82, fill:{ color:"1e56a8" }, line:{ color:"1e56a8" } });
-      s2.addText(`${i+1}. ${t}`, { x:6.85, y:2.1 + i*1.0, w:2.6, h:0.72, fontSize:11, color:WHITE, wrap:true, valign:"middle" });
+      const tPlain = plain(t);
+      const tShort = tPlain.length > 100 ? tPlain.substring(0,97)+"…" : tPlain;
+      s2.addShape(pres.shapes.RECTANGLE, { x:6.5, y:1.65+i*1.15, w:3.0, h:1.0, fill:{ color:"1e56a8" }, line:{ color:"1e56a8" } });
+      s2.addText(`${i+1}`, { x:6.55, y:1.68+i*1.15, w:0.35, h:0.3, fontSize:10, bold:true, color:GOLD });
+      s2.addText(tShort, { x:6.9, y:1.66+i*1.15, w:2.5, h:0.96, fontSize:10, color:WHITE, wrap:true, valign:"middle" });
     });
 
     // ── SLIDE 3: Behavioural Shifts ─────────────────────────────────────────
-    if (aiData.behaviouralShifts && aiData.behaviouralShifts.length > 0) {
+    const bShifts = aiData.behaviouralShifts || [];
+    if (bShifts.length) {
       let s3 = pres.addSlide();
-      s3.background = { color: "F4F6FB" };
-      s3.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:1.05, fill:{ color: DARK }, line:{ color: DARK } });
-      s3.addShape(pres.shapes.RECTANGLE, { x:0, y:1.05, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
-      s3.addText("BEHAVIOURAL SHIFTS REQUIRED", { x:0.5, y:0.22, w:9, h:0.6, fontSize:22, bold:true, color:WHITE });
-      aiData.behaviouralShifts.forEach((shift, i) => {
-        const yy = 1.35 + i * 1.25;
-        s3.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:9.0, h:1.0, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
-        s3.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:0.07, h:1.0, fill:{ color: GOLD }, line:{ color: GOLD } });
-        s3.addText(`${i+1}`, { x:0.65, y:yy+0.1, w:0.5, h:0.5, fontSize:18, bold:true, color:NAVY });
-        s3.addText(shift, { x:1.2, y:yy+0.1, w:8.1, h:0.8, fontSize:12, color:GREY, wrap:true, valign:"middle" });
+      s3.background = { color:"F4F6FB" };
+      s3.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:DARK }, line:{ color:DARK } });
+      s3.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
+      s3.addText("BEHAVIOURAL SHIFTS REQUIRED", { x:0.5, y:0.18, w:9, h:0.55, fontSize:20, bold:true, color:WHITE });
+      bShifts.slice(0,4).forEach((shift, i) => {
+        const sp = plain(shift);
+        // Split on → to get from/to
+        const parts = sp.split("→");
+        const fromPart = parts[0]?.replace(/^From\s*/i,"").trim() || sp;
+        const toPart   = parts[1]?.replace(/^To\s*/i,"").replace(/:.+/,"").trim() || "";
+        const yy = 1.05 + i*1.1;
+        s3.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:9.2, h:0.95, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
+        s3.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:0.06, h:0.95, fill:{ color:GOLD }, line:{ color:GOLD } });
+        s3.addText(`${i+1}`, { x:0.55, y:yy+0.08, w:0.4, h:0.35, fontSize:14, bold:true, color:NAVY });
+        s3.addText(`FROM:  ${fromPart}`, { x:1.05, y:yy+0.06, w:8.3, h:0.32, fontSize:11, color:"C0392B", wrap:true });
+        if (toPart) s3.addText(`TO:  ${toPart}`, { x:1.05, y:yy+0.52, w:8.3, h:0.32, fontSize:11, color:"166534", wrap:true });
       });
     }
 
     // ── SLIDE 4: Priority Actions ───────────────────────────────────────────
-    if (aiData.priorityActions && aiData.priorityActions.length > 0) {
+    const pActions = aiData.priorityActions || [];
+    if (pActions.length) {
       let s4 = pres.addSlide();
-      s4.background = { color: "F4F6FB" };
-      s4.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:1.05, fill:{ color: NAVY }, line:{ color: NAVY } });
-      s4.addShape(pres.shapes.RECTANGLE, { x:0, y:1.05, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
-      s4.addText("PRIORITY ACTIONS", { x:0.5, y:0.22, w:9, h:0.6, fontSize:22, bold:true, color:WHITE });
-      const colors = [GOLD, "27a060", NAVY];
-      aiData.priorityActions.forEach((action, i) => {
-        const yy = 1.35 + i * 1.25;
-        s4.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:0.9, h:1.0, fill:{ color: colors[i]||NAVY }, line:{ color: colors[i]||NAVY } });
-        s4.addText(`0${i+1}`, { x:0.5, y:yy+0.2, w:0.9, h:0.6, fontSize:24, bold:true, color:WHITE, align:"center" });
-        s4.addShape(pres.shapes.RECTANGLE, { x:1.5, y:yy, w:8.0, h:1.0, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
-        s4.addText(action, { x:1.65, y:yy+0.1, w:7.7, h:0.8, fontSize:12, color:GREY, wrap:true, valign:"middle" });
+      s4.background = { color:"F4F6FB" };
+      s4.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:NAVY }, line:{ color:NAVY } });
+      s4.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
+      s4.addText("PRIORITY ACTIONS", { x:0.5, y:0.18, w:9, h:0.55, fontSize:20, bold:true, color:WHITE });
+      const aColors = [GOLD, "27a060", NAVY];
+      pActions.slice(0,3).forEach((action, i) => {
+        const ap = plain(action);
+        // Split label from reason at " — "
+        const dashIdx = ap.indexOf(" — ");
+        const label  = dashIdx > -1 ? ap.substring(0, dashIdx) : ap;
+        const reason = dashIdx > -1 ? ap.substring(dashIdx+3) : "";
+        const labelShort  = label.length  > 80  ? label.substring(0,77)+"…"  : label;
+        const reasonShort = reason.length > 120 ? reason.substring(0,117)+"…" : reason;
+        const yy = 1.05 + i*1.45;
+        s4.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:1.0, h:1.25, fill:{ color:aColors[i]||NAVY }, line:{ color:aColors[i]||NAVY } });
+        s4.addText(`0${i+1}`, { x:0.4, y:yy+0.35, w:1.0, h:0.55, fontSize:22, bold:true, color:WHITE, align:"center" });
+        s4.addShape(pres.shapes.RECTANGLE, { x:1.5, y:yy, w:8.1, h:1.25, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
+        s4.addText(labelShort, { x:1.65, y:yy+0.1, w:7.8, h:0.38, fontSize:12, bold:true, color:DARK, wrap:true });
+        if (reasonShort) s4.addText(reasonShort, { x:1.65, y:yy+0.55, w:7.8, h:0.6, fontSize:10, color:GREY, wrap:true });
       });
     }
 
     // ── SLIDE 5: Group Insights ─────────────────────────────────────────────
     if (aiData.groupInsights) {
       let s5 = pres.addSlide();
-      s5.background = { color: "F4F6FB" };
-      s5.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:1.05, fill:{ color: DARK }, line:{ color: DARK } });
-      s5.addShape(pres.shapes.RECTANGLE, { x:0, y:1.05, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
-      s5.addText("GROUP INSIGHTS", { x:0.5, y:0.22, w:9, h:0.6, fontSize:22, bold:true, color:WHITE });
-      s5.addShape(pres.shapes.RECTANGLE, { x:0.5, y:1.35, w:4.4, h:3.7, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
-      s5.addShape(pres.shapes.RECTANGLE, { x:0.5, y:1.35, w:4.4, h:0.45, fill:{ color: NAVY }, line:{ color: NAVY } });
-      s5.addText("WHAT ALL GROUPS AGREED", { x:0.6, y:1.42, w:4.2, h:0.3, fontSize:9, bold:true, color:GOLD, charSpacing:2 });
-      s5.addText(aiData.groupInsights.common || "", { x:0.65, y:1.9, w:4.1, h:2.9, fontSize:12, color:GREY, wrap:true, valign:"top" });
-      s5.addShape(pres.shapes.RECTANGLE, { x:5.1, y:1.35, w:4.4, h:3.7, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
-      s5.addShape(pres.shapes.RECTANGLE, { x:5.1, y:1.35, w:4.4, h:0.45, fill:{ color: DARK }, line:{ color: DARK } });
-      s5.addText("WHERE GROUPS DIVERGED", { x:5.2, y:1.42, w:4.2, h:0.3, fontSize:9, bold:true, color:GOLD, charSpacing:2 });
-      s5.addText(aiData.groupInsights.divergence || "", { x:5.25, y:1.9, w:4.1, h:2.9, fontSize:12, color:GREY, wrap:true, valign:"top" });
+      s5.background = { color:"F4F6FB" };
+      s5.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:DARK }, line:{ color:DARK } });
+      s5.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
+      s5.addText("GROUP INSIGHTS", { x:0.5, y:0.18, w:9, h:0.55, fontSize:20, bold:true, color:WHITE });
+
+      const commonBullets  = bullets(aiData.groupInsights.common || "", 4);
+      const divergeBullets = bullets(aiData.groupInsights.divergence || "", 4);
+
+      [[commonBullets, "WHAT ALL GROUPS AGREED", 0.4, NAVY],
+       [divergeBullets, "WHERE GROUPS DIVERGED", 5.2, DARK]].forEach(([blist, title, xPos, bgCol]) => {
+        s5.addShape(pres.shapes.RECTANGLE, { x:xPos, y:1.1, w:4.5, h:4.1, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
+        s5.addShape(pres.shapes.RECTANGLE, { x:xPos, y:1.1, w:4.5, h:0.45, fill:{ color:bgCol }, line:{ color:bgCol } });
+        s5.addText(title, { x:xPos+0.15, y:1.17, w:4.2, h:0.3, fontSize:8, bold:true, color:GOLD, charSpacing:2 });
+        if (blist.length) {
+          const items = blist.map((l,idx) => ({
+            text: l, options:{ bullet:true, breakLine: idx<blist.length-1, fontSize:11, color:GREY, paraSpaceAfter:6 }
+          }));
+          s5.addText(items, { x:xPos+0.2, y:1.65, w:4.1, h:3.4 });
+        } else {
+          s5.addText(plain(aiData.groupInsights.common || ""), { x:xPos+0.2, y:1.65, w:4.1, h:3.4, fontSize:11, color:GREY, wrap:true });
+        }
+      });
     }
 
-    // ── SLIDES 6+: One slide per group — full phase responses ───────────────
+    // ── SLIDE 6: OPM Gap Overview ───────────────────────────────────────────
+    let s6 = pres.addSlide();
+    s6.background = { color:"F4F6FB" };
+    s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:NAVY }, line:{ color:NAVY } });
+    s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
+    s6.addText("THE GAP — 6 DESIGN ELEMENTS", { x:0.5, y:0.18, w:9, h:0.55, fontSize:20, bold:true, color:WHITE });
+    s6.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.05, w:4.5, h:0.35, fill:{ color:LIGHT }, line:{ color:LIGHT } });
+    s6.addText("TODAY", { x:0.4, y:1.1, w:4.5, h:0.25, fontSize:9, bold:true, color:NAVY, align:"center", charSpacing:3 });
+    s6.addShape(pres.shapes.RECTANGLE, { x:5.1, y:1.05, w:4.5, h:0.35, fill:{ color:"fffbea" }, line:{ color:"fffbea" } });
+    s6.addText("2027 VISION", { x:5.1, y:1.1, w:4.5, h:0.25, fontSize:9, bold:true, color:"8a5900", align:"center", charSpacing:3 });
+    OPM.forEach((el, i) => {
+      const yy = 1.5 + i * 0.67;
+      s6.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:4.5, h:0.58, fill:{ color:WHITE }, line:{ color:"dde5f0" } });
+      s6.addText(el.label, { x:0.5, y:yy+0.03, w:1.3, h:0.2, fontSize:8, bold:true, color:NAVY });
+      // collect today responses
+      const todayVals = [];
+      for (let n=1; n<=session.numGroups; n++) {
+        const v = groups[n]?.phase1?.[el.key];
+        if (v) todayVals.push(`G${n}: ${v}`);
+      }
+      const todayStr = todayVals.join("  |  ");
+      s6.addText(todayStr || "—", { x:0.5, y:yy+0.25, w:4.3, h:0.28, fontSize:9, color:GREY, wrap:true });
+
+      s6.addShape(pres.shapes.RECTANGLE, { x:5.1, y:yy, w:4.5, h:0.58, fill:{ color:"fffef5" }, line:{ color:"f0e5b0" } });
+      const futureVals = [];
+      for (let n=1; n<=session.numGroups; n++) {
+        const v = groups[n]?.phase3?.[el.key];
+        if (v && !v.toLowerCase().includes("not addressed")) futureVals.push(`G${n}: ${v}`);
+      }
+      const futureStr = futureVals.join("  |  ");
+      s6.addText(futureStr || "—", { x:5.2, y:yy+0.04, w:4.3, h:0.5, fontSize:9, color:"5a4000", wrap:true });
+    });
+
+    // ── SLIDES 7+: Per-group AI summary slides (NO raw responses) ───────────
     for (let i = 1; i <= session.numGroups; i++) {
       const g = groups[i];
       if (!g) continue;
+      const hasSummaries = g.summaries && Object.values(g.summaries).some(v=>v);
+      if (!hasSummaries) continue;
 
       // Group cover
       let gc = pres.addSlide();
-      gc.background = { color: NAVY };
-      gc.addShape(pres.shapes.RECTANGLE, { x:0, y:4.72, w:10, h:0.08, fill:{ color: GOLD }, line:{ color: GOLD } });
-      gc.addText(`GROUP ${i}`, { x:0.6, y:1.5, w:8.8, h:0.6, fontSize:13, bold:true, color:GOLD, charSpacing:6 });
-      gc.addText("Full Phase Responses", { x:0.6, y:2.2, w:8.8, h:1.0, fontSize:36, bold:true, color:WHITE });
-      gc.addText(session.sessionName, { x:0.6, y:3.3, w:8.8, h:0.4, fontSize:13, color:"8aaad4" });
+      gc.background = { color:NAVY };
+      gc.addShape(pres.shapes.RECTANGLE, { x:0, y:4.72, w:10, h:0.08, fill:{ color:GOLD }, line:{ color:GOLD } });
+      gc.addShape(pres.shapes.RECTANGLE, { x:0, y:4.8,  w:10, h:0.83, fill:{ color:DARK }, line:{ color:DARK } });
+      gc.addText(`GROUP ${i}`, { x:0.6, y:1.4, w:8.8, h:0.5, fontSize:12, bold:true, color:GOLD, charSpacing:6 });
+      gc.addText("AI Analysis & Insights", { x:0.6, y:2.0, w:8.8, h:0.9, fontSize:34, bold:true, color:WHITE });
+      gc.addText(session.sessionName, { x:0.6, y:3.1, w:8.8, h:0.4, fontSize:13, color:"8aaad4" });
 
-      // Phase 1
-      if (g.phase1 && Object.values(g.phase1).some(v=>v)) {
-        let sp1 = pres.addSlide();
-        sp1.background = { color: "F4F6FB" };
-        sp1.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color: NAVY }, line:{ color: NAVY } });
-        sp1.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color: GOLD }, line:{ color: GOLD } });
-        sp1.addText(`Group ${i}  ·  Phase 1: Current State`, { x:0.5, y:0.15, w:9, h:0.6, fontSize:18, bold:true, color:WHITE });
-        let yy = 1.1;
-        OPM.forEach(el => {
-          const val = g.phase1[el.key];
-          if (!val) return;
-          sp1.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:9.0, h:0.65, fill:{ color: WHITE }, line:{ color:"dde5f0" } });
-          sp1.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:0.06, h:0.65, fill:{ color: GOLD }, line:{ color: GOLD } });
-          sp1.addText(el.label, { x:0.68, y:yy+0.04, w:2.2, h:0.25, fontSize:9, bold:true, color:NAVY });
-          sp1.addText(val, { x:0.68, y:yy+0.28, w:8.6, h:0.3, fontSize:10, color:GREY, wrap:true });
-          yy += 0.72;
-        });
-      }
+      // One slide per phase that has a summary
+      const phaseMeta = [
+        { key:"phase1", label:"Phase 1 — Current State",      bg:NAVY },
+        { key:"phase2", label:"Phase 2 — Newspaper 2027",     bg:DARK },
+        { key:"phase3", label:"Phase 3 — Vision Mapping",     bg:NAVY },
+        { key:"phase4", label:"Phase 4 — Roadblocks",         bg:"8B1A1A" },
+      ];
 
-      // Phase 2
-      if (g.phase2 && g.phase2.headline) {
-        let sp2 = pres.addSlide();
-        sp2.background = { color: "F4F6FB" };
-        sp2.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color: DARK }, line:{ color: DARK } });
-        sp2.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color: GOLD }, line:{ color: GOLD } });
-        sp2.addText(`Group ${i}  ·  Phase 2: Newspaper 2027`, { x:0.5, y:0.15, w:9, h:0.6, fontSize:18, bold:true, color:WHITE });
-        sp2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:1.1, w:9.0, h:1.0, fill:{ color: NAVY }, line:{ color: NAVY }, shadow: mkShadow() });
-        sp2.addText("HEADLINE", { x:0.7, y:1.15, w:2, h:0.3, fontSize:8, bold:true, color:GOLD, charSpacing:3 });
-        sp2.addText(g.phase2.headline, { x:0.7, y:1.42, w:8.6, h:0.55, fontSize:16, bold:true, color:WHITE, wrap:true });
-        const actions = [g.phase2.action1, g.phase2.action2, g.phase2.action3].filter(Boolean);
-        actions.forEach((a, idx) => {
-          const ay = 2.3 + idx * 0.72;
-          sp2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:ay, w:9.0, h:0.62, fill:{ color: WHITE }, line:{ color:"dde5f0" } });
-          sp2.addText(`Action ${idx+1}`, { x:0.68, y:ay+0.04, w:1.5, h:0.22, fontSize:8, bold:true, color:NAVY });
-          sp2.addText(a, { x:0.68, y:ay+0.26, w:8.6, h:0.3, fontSize:10, color:GREY, wrap:true });
-        });
-        if (g.phase2.frontlineQuote) {
-          sp2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:4.4, w:9.0, h:0.9, fill:{ color: LIGHT }, line:{ color:"dde5f0" } });
-          sp2.addShape(pres.shapes.RECTANGLE, { x:0.5, y:4.4, w:0.06, h:0.9, fill:{ color: GOLD }, line:{ color: GOLD } });
-          sp2.addText(`"${g.phase2.frontlineQuote}"`, { x:0.7, y:4.45, w:8.6, h:0.8, fontSize:11, italic:true, color:GREY, wrap:true });
+      phaseMeta.forEach(pm => {
+        const raw = g.summaries?.[pm.key];
+        if (!raw) return;
+        const blist = bullets(raw, 7);
+        const summary3 = (() => {
+          const sentences = plain(raw).match(/[^.!?]+[.!?]+/g) || [];
+          return sentences.slice(0,2).join(" ").trim();
+        })();
+
+        let ps = pres.addSlide();
+        ps.background = { color:"F4F6FB" };
+        ps.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:pm.bg }, line:{ color:pm.bg } });
+        ps.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
+        ps.addText(`GROUP ${i}  ·  ${pm.label}`, { x:0.5, y:0.18, w:9, h:0.55, fontSize:18, bold:true, color:WHITE });
+
+        // Summary box
+        ps.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.05, w:9.2, h:0.85, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
+        ps.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.05, w:0.06, h:0.85, fill:{ color:GOLD }, line:{ color:GOLD } });
+        ps.addText("SUMMARY", { x:0.58, y:1.08, w:1.5, h:0.22, fontSize:8, bold:true, color:NAVY, charSpacing:2 });
+        ps.addText(summary3 || plain(raw).substring(0,180), { x:0.58, y:1.28, w:8.9, h:0.55, fontSize:11, color:GREY, wrap:true, italic:true });
+
+        // Bullet insights
+        if (blist.length) {
+          ps.addText("KEY INSIGHTS", { x:0.5, y:2.05, w:4, h:0.28, fontSize:9, bold:true, color:NAVY, charSpacing:2 });
+          const items = blist.map((l, idx) => ({
+            text: l,
+            options:{ bullet:true, breakLine: idx<blist.length-1, fontSize:11, color:GREY, paraSpaceAfter:5 }
+          }));
+          ps.addText(items, { x:0.5, y:2.38, w:9.0, h:2.9 });
         }
-      }
-
-      // Phase 3
-      if (g.phase3 && Object.values(g.phase3).some(v=>v)) {
-        let sp3 = pres.addSlide();
-        sp3.background = { color: "F4F6FB" };
-        sp3.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color: NAVY }, line:{ color: NAVY } });
-        sp3.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color: GOLD }, line:{ color: GOLD } });
-        sp3.addText(`Group ${i}  ·  Phase 3: 2027 Vision Mapping`, { x:0.5, y:0.15, w:9, h:0.6, fontSize:18, bold:true, color:WHITE });
-        let yy = 1.1;
-        OPM.forEach(el => {
-          const val = g.phase3[el.key];
-          if (!val || val.toLowerCase().includes("not addressed")) return;
-          sp3.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:9.0, h:0.65, fill:{ color: WHITE }, line:{ color:"dde5f0" } });
-          sp3.addShape(pres.shapes.RECTANGLE, { x:0.5, y:yy, w:0.06, h:0.65, fill:{ color: GOLD }, line:{ color: GOLD } });
-          sp3.addText(el.label, { x:0.68, y:yy+0.04, w:2.2, h:0.25, fontSize:9, bold:true, color:NAVY });
-          sp3.addText(val, { x:0.68, y:yy+0.28, w:8.6, h:0.3, fontSize:10, color:GREY, wrap:true });
-          yy += 0.72;
-        });
-      }
-
-      // Phase 4
-      if (g.phase4 && Object.values(g.phase4).some(v=>v)) {
-        let sp4 = pres.addSlide();
-        sp4.background = { color: "F4F6FB" };
-        sp4.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color: DARK }, line:{ color: DARK } });
-        sp4.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color: GOLD }, line:{ color: GOLD } });
-        sp4.addText(`Group ${i}  ·  Phase 4: Roadblocks`, { x:0.5, y:0.15, w:9, h:0.6, fontSize:18, bold:true, color:WHITE });
-        const blocks = [g.phase4.r1, g.phase4.r2, g.phase4.r3].filter(Boolean);
-        blocks.forEach((b, idx) => {
-          const by = 1.2 + idx * 1.2;
-          sp4.addShape(pres.shapes.RECTANGLE, { x:0.5, y:by, w:0.85, h:1.0, fill:{ color:"C0392B" }, line:{ color:"C0392B" } });
-          sp4.addText(`${idx+1}`, { x:0.5, y:by+0.2, w:0.85, h:0.6, fontSize:24, bold:true, color:WHITE, align:"center" });
-          sp4.addShape(pres.shapes.RECTANGLE, { x:1.45, y:by, w:8.05, h:1.0, fill:{ color: WHITE }, line:{ color:"dde5f0" }, shadow: mkShadow() });
-          sp4.addText(b, { x:1.6, y:by+0.15, w:7.75, h:0.7, fontSize:13, color:GREY, wrap:true, valign:"middle" });
-        });
-
-        // AI summary for this group if available
-        if (g.summaries?.phase4) {
-          sp4.addShape(pres.shapes.RECTANGLE, { x:0.5, y:4.7, w:9.0, h:0.65, fill:{ color: LIGHT }, line:{ color:"dde5f0" } });
-          sp4.addShape(pres.shapes.RECTANGLE, { x:0.5, y:4.7, w:0.06, h:0.65, fill:{ color: NAVY }, line:{ color: NAVY } });
-          sp4.addText(`AI Summary: ${g.summaries.phase4}`, { x:0.68, y:4.75, w:8.7, h:0.55, fontSize:9, italic:true, color:GREY, wrap:true });
-        }
-      }
+      });
     }
 
     // ── Final slide ─────────────────────────────────────────────────────────
     let sf = pres.addSlide();
-    sf.background = { color: DARK };
-    sf.addShape(pres.shapes.RECTANGLE, { x:0, y:2.4, w:10, h:0.07, fill:{ color: GOLD }, line:{ color: GOLD } });
-    sf.addText("Thank You", { x:0.6, y:1.1, w:8.8, h:1.1, fontSize:48, bold:true, color:WHITE, align:"center" });
-    sf.addText("This document is confidential and prepared exclusively for internal use.", { x:1, y:2.7, w:8, h:0.6, fontSize:12, color:"8aaad4", align:"center", italic:true });
-    sf.addText("Carnelian Co  ·  carnelianco.com", { x:1, y:3.4, w:8, h:0.5, fontSize:12, color:GOLD, align:"center" });
+    sf.background = { color:DARK };
+    sf.addShape(pres.shapes.RECTANGLE, { x:0, y:2.55, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
+    sf.addText("Thank You", { x:0.6, y:1.1, w:8.8, h:1.1, fontSize:44, bold:true, color:WHITE, align:"center" });
+    sf.addText("This document is confidential and prepared exclusively for internal use.", { x:1, y:2.85, w:8, h:0.5, fontSize:11, color:"8aaad4", align:"center", italic:true });
+    sf.addText("Carnelian Co  ·  carnelianco.com", { x:1, y:3.55, w:8, h:0.45, fontSize:12, color:GOLD, align:"center" });
 
     await pres.writeFile({ fileName: `Culture_Gap_Report_${session.code}.pptx` });
   } catch (e) {
@@ -1011,7 +1066,29 @@ function Report({ session, groups, onClose }) {
                   {g.summaries?.phase1 && (
                     <Box sx={{ mt:1.5, p:2, background:BAT_LIGHT, borderLeft:`3px solid ${BAT_NAVY}`, borderRadius:1 }}>
                       <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>AI Summary</Typography>
-                      <Typography variant="body2" sx={{ color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6 }}>{g.summaries.phase1}</Typography>
+                      <Box sx={{
+  color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6,
+  "& strong":{ color:BAT_DARK, fontWeight:700 },
+  "& ul":{ pl:2, mt:0.5, mb:0.5 },
+  "& li":{ mb:0.3 },
+  "& hr":{ border:"none", borderTop:`1px solid rgba(23,70,139,0.12)`, my:1 },
+  "& blockquote":{ borderLeft:`3px solid ${BAT_GOLD}`, pl:1.5, ml:0, fontStyle:"italic", my:1 }
+}} dangerouslySetInnerHTML={{ __html: (() => {
+  let html = g.summaries.phase1; // change phase key here for each one
+  html = html.replace(/(\|.+\|\n?)+/g,"");
+  html = html.replace(/^---+$/gm,"<hr/>");
+  html = html.replace(/^#{1,2} (.+)$/gm,"<strong style='display:block;font-size:0.8rem;color:#17468B;margin-top:8px'>$1</strong>");
+  html = html.replace(/^#{3,4} (.+)$/gm,"<strong style='display:block;font-size:0.78rem;color:#0d2a5a;margin-top:6px'>$1</strong>");
+  html = html.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  html = html.replace(/^> (.+)$/gm,"<blockquote>$1</blockquote>");
+  html = html.replace(/(^[•\-\*] .+$(\n[•\-\*] .+$)*)/gm,(match)=>{
+    const items = match.split("\n").filter(l=>l.trim()).map(l=>`<li>${l.replace(/^[•\-\*] /,"")}</li>`).join("");
+    return `<ul style='padding-left:16px;margin:4px 0'>${items}</ul>`;
+  });
+  html = html.replace(/\n{2,}/g,"<br/>");
+  html = html.replace(/\n/g," ");
+  return html;
+})() }} />
                     </Box>
                   )}
                 </Box>
@@ -1050,7 +1127,29 @@ function Report({ session, groups, onClose }) {
                   {g.summaries?.phase2 && (
                     <Box sx={{ mt:1.5, p:2, background:BAT_LIGHT, borderLeft:`3px solid ${BAT_NAVY}`, borderRadius:1 }}>
                       <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>AI Summary</Typography>
-                      <Typography variant="body2" sx={{ color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6 }}>{g.summaries.phase2}</Typography>
+                      <Box sx={{
+  color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6,
+  "& strong":{ color:BAT_DARK, fontWeight:700 },
+  "& ul":{ pl:2, mt:0.5, mb:0.5 },
+  "& li":{ mb:0.3 },
+  "& hr":{ border:"none", borderTop:`1px solid rgba(23,70,139,0.12)`, my:1 },
+  "& blockquote":{ borderLeft:`3px solid ${BAT_GOLD}`, pl:1.5, ml:0, fontStyle:"italic", my:1 }
+}} dangerouslySetInnerHTML={{ __html: (() => {
+  let html = g.summaries.phase2; // change phase key here for each one
+  html = html.replace(/(\|.+\|\n?)+/g,"");
+  html = html.replace(/^---+$/gm,"<hr/>");
+  html = html.replace(/^#{1,2} (.+)$/gm,"<strong style='display:block;font-size:0.8rem;color:#17468B;margin-top:8px'>$1</strong>");
+  html = html.replace(/^#{3,4} (.+)$/gm,"<strong style='display:block;font-size:0.78rem;color:#0d2a5a;margin-top:6px'>$1</strong>");
+  html = html.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  html = html.replace(/^> (.+)$/gm,"<blockquote>$1</blockquote>");
+  html = html.replace(/(^[•\-\*] .+$(\n[•\-\*] .+$)*)/gm,(match)=>{
+    const items = match.split("\n").filter(l=>l.trim()).map(l=>`<li>${l.replace(/^[•\-\*] /,"")}</li>`).join("");
+    return `<ul style='padding-left:16px;margin:4px 0'>${items}</ul>`;
+  });
+  html = html.replace(/\n{2,}/g,"<br/>");
+  html = html.replace(/\n/g," ");
+  return html;
+})() }} />
                     </Box>
                   )}
                 </Box>
@@ -1079,7 +1178,29 @@ function Report({ session, groups, onClose }) {
                   {g.summaries?.phase3 && (
                     <Box sx={{ mt:1.5, p:2, background:BAT_LIGHT, borderLeft:`3px solid ${BAT_NAVY}`, borderRadius:1 }}>
                       <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>AI Summary</Typography>
-                      <Typography variant="body2" sx={{ color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6 }}>{g.summaries.phase3}</Typography>
+                      <Box sx={{
+  color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6,
+  "& strong":{ color:BAT_DARK, fontWeight:700 },
+  "& ul":{ pl:2, mt:0.5, mb:0.5 },
+  "& li":{ mb:0.3 },
+  "& hr":{ border:"none", borderTop:`1px solid rgba(23,70,139,0.12)`, my:1 },
+  "& blockquote":{ borderLeft:`3px solid ${BAT_GOLD}`, pl:1.5, ml:0, fontStyle:"italic", my:1 }
+}} dangerouslySetInnerHTML={{ __html: (() => {
+  let html = g.summaries.phase3; // change phase key here for each one
+  html = html.replace(/(\|.+\|\n?)+/g,"");
+  html = html.replace(/^---+$/gm,"<hr/>");
+  html = html.replace(/^#{1,2} (.+)$/gm,"<strong style='display:block;font-size:0.8rem;color:#17468B;margin-top:8px'>$1</strong>");
+  html = html.replace(/^#{3,4} (.+)$/gm,"<strong style='display:block;font-size:0.78rem;color:#0d2a5a;margin-top:6px'>$1</strong>");
+  html = html.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  html = html.replace(/^> (.+)$/gm,"<blockquote>$1</blockquote>");
+  html = html.replace(/(^[•\-\*] .+$(\n[•\-\*] .+$)*)/gm,(match)=>{
+    const items = match.split("\n").filter(l=>l.trim()).map(l=>`<li>${l.replace(/^[•\-\*] /,"")}</li>`).join("");
+    return `<ul style='padding-left:16px;margin:4px 0'>${items}</ul>`;
+  });
+  html = html.replace(/\n{2,}/g,"<br/>");
+  html = html.replace(/\n/g," ");
+  return html;
+})() }} />
                     </Box>
                   )}
                 </Box>
@@ -1104,7 +1225,29 @@ function Report({ session, groups, onClose }) {
                   {g.summaries?.phase4 && (
                     <Box sx={{ mt:1.5, p:2, background:BAT_LIGHT, borderLeft:`3px solid ${BAT_NAVY}`, borderRadius:1 }}>
                       <Typography variant="overline" sx={{ color:BAT_NAVY, display:"block", mb:0.5, fontSize:"0.6rem" }}>AI Summary</Typography>
-                      <Typography variant="body2" sx={{ color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6 }}>{g.summaries.phase4}</Typography>
+                      <Box sx={{
+  color:"#2a3a50", fontSize:"0.82rem", lineHeight:1.6,
+  "& strong":{ color:BAT_DARK, fontWeight:700 },
+  "& ul":{ pl:2, mt:0.5, mb:0.5 },
+  "& li":{ mb:0.3 },
+  "& hr":{ border:"none", borderTop:`1px solid rgba(23,70,139,0.12)`, my:1 },
+  "& blockquote":{ borderLeft:`3px solid ${BAT_GOLD}`, pl:1.5, ml:0, fontStyle:"italic", my:1 }
+}} dangerouslySetInnerHTML={{ __html: (() => {
+  let html = g.summaries.phase4; // change phase key here for each one
+  html = html.replace(/(\|.+\|\n?)+/g,"");
+  html = html.replace(/^---+$/gm,"<hr/>");
+  html = html.replace(/^#{1,2} (.+)$/gm,"<strong style='display:block;font-size:0.8rem;color:#17468B;margin-top:8px'>$1</strong>");
+  html = html.replace(/^#{3,4} (.+)$/gm,"<strong style='display:block;font-size:0.78rem;color:#0d2a5a;margin-top:6px'>$1</strong>");
+  html = html.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  html = html.replace(/^> (.+)$/gm,"<blockquote>$1</blockquote>");
+  html = html.replace(/(^[•\-\*] .+$(\n[•\-\*] .+$)*)/gm,(match)=>{
+    const items = match.split("\n").filter(l=>l.trim()).map(l=>`<li>${l.replace(/^[•\-\*] /,"")}</li>`).join("");
+    return `<ul style='padding-left:16px;margin:4px 0'>${items}</ul>`;
+  });
+  html = html.replace(/\n{2,}/g,"<br/>");
+  html = html.replace(/\n/g," ");
+  return html;
+})() }} />
                     </Box>
                   )}
                 </Box>
