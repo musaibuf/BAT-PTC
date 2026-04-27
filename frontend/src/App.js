@@ -411,15 +411,22 @@ function GroupSummaries({ sessionCode, group, refresh }) {
                 </Box>
                 {summary ? (
   <Box sx={{ color: "#4A6080", fontSize: "0.75rem", lineHeight: 1.6, "& strong": { color: BAT_DARK, fontWeight: 700 }, "& ul": { pl: 2, mt: 0.5 }, "& li": { mb: 0.3 } }}
-    dangerouslySetInnerHTML={{ __html: summary
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/^### (.+)$/gm, "<strong style='font-size:0.8rem;color:#17468B'>$1</strong>")
-      .replace(/^## (.+)$/gm, "<strong style='font-size:0.82rem;color:#17468B'>$1</strong>")
-      .replace(/^• (.+)$/gm, "<li>$1</li>")
-      .replace(/^- (.+)$/gm, "<li>$1</li>")
-      .replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>")
-      .replace(/\n\n/g, "<br/>")
-    }}
+    dangerouslySetInnerHTML={{ __html: (() => {
+      let html = summary;
+      html = html.replace(/(\|.+\|\n?)+/g, "");
+      html = html.replace(/^---+$/gm, "<hr/>");
+      html = html.replace(/^#{1,2} (.+)$/gm, "<strong style='display:block;font-size:0.8rem;color:#17468B;margin-top:8px'>$1</strong>");
+      html = html.replace(/^#{3,4} (.+)$/gm, "<strong style='display:block;font-size:0.78rem;color:#0d2a5a;margin-top:6px'>$1</strong>");
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/^> (.+)$/gm, "<blockquote style='border-left:3px solid #FAB41E;padding-left:10px;margin:6px 0;font-style:italic;color:#0d2a5a'>$1</blockquote>");
+      html = html.replace(/(^[•\-\*] .+$(\n[•\-\*] .+$)*)/gm, (match) => {
+        const items = match.split("\n").filter(l => l.trim()).map(l => `<li>${l.replace(/^[•\-\*] /, "")}</li>`).join("");
+        return `<ul style='padding-left:16px;margin:4px 0'>${items}</ul>`;
+      });
+      html = html.replace(/\n{2,}/g, "<br/>");
+      html = html.replace(/\n/g, " ");
+      return html;
+    })() }}
   />
 ) : <Typography variant="body2" sx={{ color: "#9bb0cc", fontSize: "0.7rem", fontStyle: "italic" }}>No summary yet.</Typography>}</Box>
             );
