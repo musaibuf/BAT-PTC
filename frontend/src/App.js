@@ -112,13 +112,12 @@ async function autoMap(np) {
   } catch { return out; }
 }
 
-async function generateSummary(data) {
+async function generateSummary(data, phase) {
   try {
-    const r = await fetch(`${API_URL}/ai/summarize`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({data: JSON.stringify(data)}) });
+    const r = await fetch(`${API_URL}/ai/summarize`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({data: JSON.stringify(data), phase}) });
     const d = await r.json(); return d.text;
   } catch { return "Summary unavailable."; }
 }
-
 async function generateThemes(data) {
   try {
     const r = await fetch(`${API_URL}/ai/themes`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({data: JSON.stringify(data)}) });
@@ -379,7 +378,7 @@ function GroupSummaries({ sessionCode, group, refresh }) {
 
   const handleSummarize = async (phaseKey) => {
     setLoading(true);
-    const text = await generateSummary(group[phaseKey]);
+    const text = await generateSummary(group[phaseKey], phaseKey);
     const newSummaries = { ...(group.summaries || {}), [phaseKey]: text };
     await saveGroup(sessionCode, group.groupNumber, { summaries: newSummaries });
     await refresh();
@@ -410,8 +409,19 @@ function GroupSummaries({ sessionCode, group, refresh }) {
                   <Typography variant="overline" sx={{ color: BAT_DARK, lineHeight: 1 }}>{p.label}</Typography>
                   {!summary && <Button size="small" variant="text" onClick={() => handleSummarize(p.key)} disabled={loading} sx={{ minWidth: 0, p: 0, fontSize: "0.65rem" }}>{loading ? "..." : "Summarize"}</Button>}
                 </Box>
-                {summary ? <Typography variant="body2" sx={{ color: "#4A6080", fontSize: "0.75rem", lineHeight: 1.4 }}>{summary}</Typography> : <Typography variant="body2" sx={{ color: "#9bb0cc", fontSize: "0.7rem", fontStyle: "italic" }}>No summary yet.</Typography>}
-              </Box>
+                {summary ? (
+  <Box sx={{ color: "#4A6080", fontSize: "0.75rem", lineHeight: 1.6, "& strong": { color: BAT_DARK, fontWeight: 700 }, "& ul": { pl: 2, mt: 0.5 }, "& li": { mb: 0.3 } }}
+    dangerouslySetInnerHTML={{ __html: summary
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/^### (.+)$/gm, "<strong style='font-size:0.8rem;color:#17468B'>$1</strong>")
+      .replace(/^## (.+)$/gm, "<strong style='font-size:0.82rem;color:#17468B'>$1</strong>")
+      .replace(/^• (.+)$/gm, "<li>$1</li>")
+      .replace(/^- (.+)$/gm, "<li>$1</li>")
+      .replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>")
+      .replace(/\n\n/g, "<br/>")
+    }}
+  />
+) : <Typography variant="body2" sx={{ color: "#9bb0cc", fontSize: "0.7rem", fontStyle: "italic" }}>No summary yet.</Typography>}</Box>
             );
           })}
         </Stack>
