@@ -824,16 +824,26 @@ const handlePPTX = async () => {
       s3.addText("BEHAVIOURAL SHIFTS REQUIRED", { x:0.5, y:0.18, w:9, h:0.55, fontSize:20, bold:true, color:WHITE });
       bShifts.slice(0,4).forEach((shift, i) => {
         const sp = plain(shift);
-        // Split on → to get from/to
-        const parts = sp.split("→");
-        const fromPart = parts[0]?.replace(/^From\s*/i,"").trim() || sp;
-        const toPart   = parts[1]?.replace(/^To\s*/i,"").replace(/:.+/,"").trim() || "";
+        // Try → first, then fall back to " to " split
+        let fromPart = "", toPart = "";
+        if (sp.includes("→")) {
+          const parts = sp.split("→");
+          fromPart = parts[0].replace(/^From\s*/i,"").trim();
+          toPart   = parts[1]?.replace(/^To\s*/i,"").replace(/^:\s*/,"").trim() || "";
+        } else {
+          // match "from X to Y" pattern case-insensitively
+          const m = sp.match(/^From\s+(.+?)\s+to\s+(.+?)(?:\s*[:\-—].*)?$/i);
+          if (m) { fromPart = m[1].trim(); toPart = m[2].trim(); }
+          else { fromPart = sp; toPart = ""; }
+        }
+        // strip trailing colon/reason from toPart for display
+        toPart = toPart.replace(/\s*[:\-—].*$/,"").trim();
         const yy = 1.05 + i*1.1;
         s3.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:9.2, h:0.95, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
         s3.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:0.06, h:0.95, fill:{ color:GOLD }, line:{ color:GOLD } });
         s3.addText(`${i+1}`, { x:0.55, y:yy+0.08, w:0.4, h:0.35, fontSize:14, bold:true, color:NAVY });
-        s3.addText(`FROM:  ${fromPart}`, { x:1.05, y:yy+0.06, w:8.3, h:0.32, fontSize:11, color:"C0392B", wrap:true });
-        if (toPart) s3.addText(`TO:  ${toPart}`, { x:1.05, y:yy+0.52, w:8.3, h:0.32, fontSize:11, color:"166534", wrap:true });
+        s3.addText(`FROM:  ${fromPart}`, { x:1.05, y:yy+0.06, w:8.3, h:0.32, fontSize:11, color:"C0392B", wrap:true, shrinkText:true });
+        if (toPart) s3.addText(`TO:  ${toPart}`, { x:1.05, y:yy+0.52, w:8.3, h:0.32, fontSize:11, color:"166534", wrap:true, shrinkText:true });
       });
     }
 
@@ -875,18 +885,34 @@ const handlePPTX = async () => {
       const commonBullets  = bullets(aiData.groupInsights.common || "", 4);
       const divergeBullets = bullets(aiData.groupInsights.divergence || "", 4);
 
-      [[commonBullets, "WHAT ALL GROUPS AGREED", 0.4, NAVY],
-       [divergeBullets, "WHERE GROUPS DIVERGED", 5.2, DARK]].forEach(([blist, title, xPos, bgCol]) => {
+      const commonText    = plain(aiData.groupInsights?.common || "");
+      const divergeText   = plain(aiData.groupInsights?.divergence || "");
+      // detect if AI returned same content for both — if so show a note on diverge side
+      const isSame = commonText.trim().toLowerCase() === divergeText.trim().toLowerCase();
+
+      [[commonBullets, commonText, "WHAT ALL GROUPS AGREED", 0.4, NAVY],
+       [divergeBullets, isSame ? "" : divergeText, "WHERE GROUPS DIVERGED", 5.2, DARK]].forEach(([blist, fallbackText, title, xPos, bgCol], panelIdx) => {
         s5.addShape(pres.shapes.RECTANGLE, { x:xPos, y:1.1, w:4.5, h:4.1, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
         s5.addShape(pres.shapes.RECTANGLE, { x:xPos, y:1.1, w:4.5, h:0.45, fill:{ color:bgCol }, line:{ color:bgCol } });
         s5.addText(title, { x:xPos+0.15, y:1.17, w:4.2, h:0.3, fontSize:8, bold:true, color:GOLD, charSpacing:2 });
-        if (blist.length) {
-          const items = blist.map((l,idx) => ({
-            text: l, options:{ bullet:true, breakLine: idx<blist.length-1, fontSize:11, color:GREY, paraSpaceAfter:6 }
-          }));
+        if (panelIdx === 1 && isSame) {
+          // AI gave same text — write a meaningful note instead
+          const noteLines = [];
+          for (let n=1; n<=session.numGroups; n++) {
+            const g = groups[n];
+            if (!g) continue;
+            const rb = [g.phase4?.r1, g.phase4?.r2, g.phase4?.r3].filter(Boolean);
+            if (rb.length) noteLines.push(`Group ${n} flagged: ${rb[0]}`);
+          }
+          const noteItems = noteLines.length
+            ? noteLines.map((l,idx) => ({ text:l, options:{ bullet:true, breakLine:idx<noteLines.length-1, fontSize:11, color:GREY, paraSpaceAfter:6 } }))
+            : [{ text:"Groups showed high alignment — no significant divergence detected in this session.", options:{ fontSize:11, color:GREY } }];
+          s5.addText(noteItems, { x:xPos+0.2, y:1.65, w:4.1, h:3.4 });
+        } else if (blist.length) {
+          const items = blist.map((l,idx) => ({ text:l, options:{ bullet:true, breakLine:idx<blist.length-1, fontSize:11, color:GREY, paraSpaceAfter:6 } }));
           s5.addText(items, { x:xPos+0.2, y:1.65, w:4.1, h:3.4 });
-        } else {
-          s5.addText(plain(aiData.groupInsights.common || ""), { x:xPos+0.2, y:1.65, w:4.1, h:3.4, fontSize:11, color:GREY, wrap:true });
+        } else if (fallbackText) {
+          s5.addText(fallbackText, { x:xPos+0.2, y:1.65, w:4.1, h:3.4, fontSize:11, color:GREY, wrap:true });
         }
       });
     }
@@ -932,10 +958,29 @@ const handlePPTX = async () => {
       s6.addText(gapItems.length ? gapItems : [{ text:"Gap data not available", options:{ fontSize:10, color:GREY } }], { x:2.85, y:yy+0.06, w:6.7, h:0.52 });
     });
 
-    // ── SLIDES 7+: Per-group AI summary slides (NO raw responses) ───────────
+    // ── SLIDES 7+: Per-group AI summary slides ──────────────────────────────
     for (let i = 1; i <= session.numGroups; i++) {
       const g = groups[i];
       if (!g) continue;
+      const hasAnyData = (g.phase1 && Object.values(g.phase1).some(v=>v)) ||
+                         (g.phase2 && g.phase2.headline) ||
+                         (g.phase3 && Object.values(g.phase3).some(v=>v)) ||
+                         (g.phase4 && Object.values(g.phase4).some(v=>v));
+      if (!hasAnyData) continue;
+
+      // Generate any missing summaries on the fly
+      const phasesToGen = ["phase1","phase2","phase3","phase4"];
+      for (const pk of phasesToGen) {
+        if (!g.summaries?.[pk] && g[pk] && Object.values(g[pk]).some(v=>v)) {
+          try {
+            const r = await fetch(`${API_URL}/ai/summarize`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ data: JSON.stringify(g[pk]), phase: pk }) });
+            const d = await r.json();
+            if (!g.summaries) g.summaries = {};
+            g.summaries[pk] = d.text || "";
+          } catch { g.summaries = g.summaries || {}; g.summaries[pk] = ""; }
+        }
+      }
+
       const hasSummaries = g.summaries && Object.values(g.summaries).some(v=>v);
       if (!hasSummaries) continue;
 
@@ -968,7 +1013,7 @@ const handlePPTX = async () => {
           const sentences = cleaned.match(/[^.!?]+[.!?]+/g) || [];
           return sentences.slice(0,2).join(" ").trim();
         })();
-        
+
         let ps = pres.addSlide();
         ps.background = { color:"F4F6FB" };
         ps.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:pm.bg }, line:{ color:pm.bg } });
