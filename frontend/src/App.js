@@ -742,18 +742,30 @@ const handlePPTX = async () => {
       .trim();
 
     // helper — extract bullet lines from AI text
+    const HEADER_PATTERN = /^(Current State Summary|Common Themes|Problematic Behaviours|Key Cultural Findings|Transformation Priorities|Bottom Line|Headline Insight|What This Group|Implied Actionable|Cultural & Behaviour|Facilitator Note|Phase \d|Roadblock Summary|Top Roadblocks|Commitments Made|Full Arc|Gap Summary|Key Gaps|Behavioural Shifts|Connection to|Biggest Risk|Recommended Priority|Summary|Key Insights|Actionable Steps|Critical Issues)/i;
+
     const bullets = (t="", max=6) => {
-      const lines = t.split("\n")
+      return t.split("\n")
         .map(l => l
-          .replace(/^#{1,4}\s*/,"")           // strip ## headers
-          .replace(/^[•\-\*\d\.]+\s*/,"")     // strip bullets/numbers
-          .replace(/\*\*(.+?)\*\*/g,"$1")     // strip bold
-          .replace(/\*(.+?)\*/g,"$1")         // strip italic
-          .replace(/^(Current State Summary|Common Themes|Problematic Behaviours|Key Cultural|Transformation Priorities|Bottom Line).*/i,"") // strip section headers
+          .replace(/^#{1,6}\s*/,"")
+          .replace(/^[•\-\*\d\.]+\s*/,"")
+          .replace(/\*\*(.+?)\*\*/g,"$1")
+          .replace(/\*(.+?)\*/g,"$1")
+          .replace(/^>\s*/,"")
+          .replace(/\s*\*+\s*$/,"")
           .trim()
         )
-        .filter(l => l.length > 15 && l.length < 220 && !l.match(/^#+/) && !l.includes("---"));
-      return lines.slice(0, max);
+        .filter(l =>
+          l.length > 20 &&
+          l.length < 220 &&
+          !l.match(/^#+/) &&
+          !l.includes("---") &&
+          !l.includes("|") &&
+          !HEADER_PATTERN.test(l) &&
+          !l.endsWith("**") &&
+          !l.match(/^[A-Z][a-z]+ \d+ (Analysis|Summary|Exercise)/)
+        )
+        .slice(0, max);
     };
 
     // ── SLIDE 1: Title ──────────────────────────────────────────────────────
@@ -949,10 +961,14 @@ const handlePPTX = async () => {
         if (!raw) return;
         const blist = bullets(raw, 7);
         const summary3 = (() => {
-          const sentences = plain(raw).match(/[^.!?]+[.!?]+/g) || [];
+          const cleaned = plain(raw)
+            .split("\n")
+            .filter(l => !HEADER_PATTERN.test(l.trim()) && l.trim().length > 20)
+            .join(" ");
+          const sentences = cleaned.match(/[^.!?]+[.!?]+/g) || [];
           return sentences.slice(0,2).join(" ").trim();
         })();
-
+        
         let ps = pres.addSlide();
         ps.background = { color:"F4F6FB" };
         ps.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:pm.bg }, line:{ color:pm.bg } });

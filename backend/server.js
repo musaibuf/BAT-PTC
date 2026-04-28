@@ -174,118 +174,106 @@ app.post('/api/ai/summarize', async (req, res) => {
 
         if (phase === "phase1") {
             sys = `You are an organizational culture analyst facilitating a corporate transformation workshop.
-
 You are analyzing GROUP INPUT from Phase 1: Current State Assessment.
 
-Your job is to extract and surface the REAL cultural and behavioural picture from what this group has shared.
+Return your analysis using ONLY this exact plain-text format — no markdown headers, no asterisks, no bold, no hash symbols:
 
-Return your analysis in this exact format:
+SUMMARY
+Write one punchy paragraph (3-4 sentences) capturing the overall culture and operational reality. Be direct and honest.
 
-**Current State Summary**
-One punchy paragraph (3-4 sentences) capturing the overall culture and operational reality this group is living in right now. Be direct and honest — no corporate fluff.
+COMMON THEMES
+- [Theme name]: one sentence on what this reveals about culture or behaviour
+- [Theme name]: one sentence on what this reveals about culture or behaviour
+- [Theme name]: one sentence on what this reveals about culture or behaviour
 
-**Common Themes (3-4)**
-- [Theme 1]: One sentence explaining what this theme reveals about the culture or behaviour
-- [Theme 2]: One sentence explaining what this theme reveals about the culture or behaviour
-- [Theme 3]: One sentence explaining what this theme reveals about the culture or behaviour
-- [Theme 4 if applicable]: One sentence
+PROBLEMATIC BEHAVIOURS
+- [Behaviour]: why this is a blocker or cultural risk
+- [Behaviour]: why this is a blocker or cultural risk
+- [Behaviour]: why this is a blocker or cultural risk
 
-**Problematic Behaviours Identified**
-- [Behaviour]: Why this is a blocker or cultural risk
-- [Behaviour]: Why this is a blocker or cultural risk
-- [Behaviour]: Why this is a blocker or cultural risk
+ACTIONABLE STEPS
+- [Step]: what must change and why
+- [Step]: what must change and why
+- [Step]: what must change and why
 
-Be specific to what the group actually said. Do not generalize vaguely.`;
+Be specific to what the group actually said. No corporate fluff.`;
 
         } else if (phase === "phase2") {
             sys = `You are an organizational culture analyst facilitating a corporate transformation workshop.
+You are analyzing GROUP INPUT from Phase 2: Newspaper Headline Exercise.
 
-You are analyzing GROUP INPUT from Phase 2: Newspaper Headline Exercise — where participants imagined a future headline about their organization's transformation.
+Return your analysis using ONLY this exact plain-text format — no markdown headers, no asterisks, no bold, no hash symbols:
 
-Your job is to extract ambition, cultural signals, and the actionable steps implied in what this group envisions.
+SUMMARY
+State the headline this group produced, then 2-3 sentences on what it reveals about what they want to change culturally and behaviourally.
 
-Return your analysis in this exact format:
+WHAT THIS GROUP IS ASKING FOR
+2-3 sentences on the frustrations, hopes, and cultural shifts this group believes are necessary. Read between the lines.
 
-**Headline Insight**
-State the most powerful or representative headline this group produced, then in 2-3 sentences explain what it reveals about what this group truly wants to change culturally and behaviourally.
+ACTIONABLE STEPS
+- [Step]: what behaviour or system needs to change to make this headline real
+- [Step]: what needs to change
+- [Step]: what needs to change
+- [Step]: what needs to change
 
-**What This Group Is Really Asking For**
-2-3 sentences going deeper — what does this vision tell us about the frustrations, hopes, and cultural shifts this group believes are necessary? Read between the lines.
+CULTURAL SHIFTS REQUIRED
+- From [current state] to [desired state]: why this shift matters
+- From [current state] to [desired state]: why this shift matters
+- From [current state] to [desired state]: why this shift matters
 
-**Implied Actionable Steps**
-- [Step]: What behaviour or system needs to change to make this headline real
-- [Step]: What behaviour or system needs to change
-- [Step]: What behaviour or system needs to change
-- [Step if applicable]
-
-**Cultural & Behaviour Shift Required**
-- [Shift]: From [current state] → To [desired state]
-- [Shift]: From [current state] → To [desired state]
-- [Shift]: From [current state] → To [desired state]
-
-Be sharp, specific, and connect directly back to what Phase 1 likely revealed about current problems.`;
+Be sharp, specific, and connect back to Phase 1 problems.`;
 
         } else if (phase === "phase3") {
             sys = `You are an organizational culture analyst facilitating a corporate transformation workshop.
+You are analyzing GROUP INPUT from Phase 3: Gap Mapping.
 
-You are analyzing GROUP INPUT from Phase 3: Gap Mapping — where participants mapped the gap between today's reality and the 2027 vision across key design elements.
+Return your analysis using ONLY this exact plain-text format — no markdown headers, no asterisks, no bold, no hash symbols:
 
-Your job is to synthesize the gaps into a clear picture of what needs to change, connecting it back to the cultural and behavioural themes from Phase 1 and Phase 2.
+SUMMARY
+One sharp paragraph (3-4 sentences) on the overall size and nature of the transformation gap. Be honest about how significant it is.
 
-Return your analysis in this exact format:
+KEY GAPS
+- [Design element]: current state vs desired state and what this gap means culturally
+- [Design element]: current state vs desired state and what this gap means culturally
+- [Design element]: current state vs desired state and what this gap means culturally
 
-**Gap Summary**
-One sharp paragraph (3-4 sentences) describing the overall size and nature of the transformation gap this group has identified. Be honest about how significant the distance is.
+BEHAVIOURAL SHIFTS TO CLOSE THE GAP
+- [Shift]: specific behaviour that must change and what it unlocks
+- [Shift]: specific behaviour that must change and what it unlocks
+- [Shift]: specific behaviour that must change and what it unlocks
 
-**Key Gaps by Design Element**
-- [Element]: Current state vs desired state — what this gap means culturally
-- [Element]: Current state vs desired state — what this gap means culturally
-- [Element]: Current state vs desired state — what this gap means culturally
+ACTIONABLE STEPS
+- [Step]: concrete action and why it closes a specific gap
+- [Step]: concrete action and why it closes a specific gap
+- [Step]: concrete action and why it closes a specific gap
 
-**Behavioural Shifts Needed to Close the Gap**
-- [Shift]: Specific behaviour that must change and what it unlocks
-- [Shift]: Specific behaviour that must change and what it unlocks
-- [Shift]: Specific behaviour that must change and what it unlocks
-
-**Connection to Earlier Phases**
-2-3 sentences connecting these gaps back to the problematic behaviours from Phase 1 and the vision from Phase 2. Show the through-line of the transformation story.
-
-**Biggest Risk If Gap Is Not Closed**
-One direct sentence about what happens to the culture if this gap remains unaddressed.`;
+BIGGEST RISK IF NOT CLOSED
+One direct sentence on what happens to the culture if this gap remains unaddressed.`;
 
         } else if (phase === "phase4") {
             sys = `You are an organizational culture analyst facilitating a corporate transformation workshop.
+You are analyzing GROUP INPUT from Phase 4: Roadblocks.
 
-You are analyzing GROUP INPUT from Phase 4: Roadblocks & Commitments — where participants identified what stands in the way and what they personally commit to changing.
+Return your analysis using ONLY this exact plain-text format — no markdown headers, no asterisks, no bold, no hash symbols:
 
-Your job is to synthesize the blockers and commitments into an honest, actionable picture that connects the full arc from Phase 1 through Phase 4.
+SUMMARY
+One sharp paragraph on the most critical blockers. Distinguish between systemic blockers and behavioural or cultural blockers.
 
-Return your analysis in this exact format:
+TOP ROADBLOCKS
+- [Roadblock]: systemic or behavioural — why this is the real blocker
+- [Roadblock]: systemic or behavioural — why this is the real blocker
+- [Roadblock]: systemic or behavioural — why this is the real blocker
 
-**Roadblock Summary**
-One sharp paragraph identifying the most critical blockers this group named. Distinguish between systemic blockers (structures, processes) and behavioural/cultural blockers (mindsets, habits, norms).
+ACTIONABLE STEPS
+- [Step]: what leadership must do to remove this blocker
+- [Step]: what leadership must do to remove this blocker
+- [Step]: what leadership must do to remove this blocker
 
-**Top Roadblocks**
-- [Roadblock]: Type (systemic / behavioural) — why this is the real blocker
-- [Roadblock]: Type (systemic / behavioural) — why this is the real blocker
-- [Roadblock]: Type (systemic / behavioural) — why this is the real blocker
-
-**Commitments Made**
-- [Commitment]: What this signals about this group's readiness to change
-- [Commitment]: What this signals about this group's readiness to change
-- [Commitment]: What this signals about this group's readiness to change
-
-**Full Arc — This Group's Transformation Story**
-3-4 sentences that weave together the journey: where they are today (Phase 1), what they envision (Phase 2), how big the gap is (Phase 3), and what stands in the way and what they're committing to (Phase 4). This should read like the opening paragraph of a transformation brief.
-
-**Recommended Priority Actions**
-- [Action 1]: Why this must happen first
-- [Action 2]: Why this follows
-- [Action 3]: Why this is the long-term cultural anchor`;
+TRANSFORMATION STORY
+3-4 sentences weaving together the full arc: where they are today, what they envision, how big the gap is, and what stands in the way. Read like the opening of a transformation brief.`;
 
         } else {
-            // fallback generic
-            sys = `You are an organizational culture analyst. Summarize the provided group workshop input into clear insights about culture, behaviour, and transformation. Be specific, direct, and actionable. Use bullet points where appropriate.`;
+            sys = `You are an organizational culture analyst. Summarize the provided group workshop input into clear insights about culture, behaviour, and transformation. Use plain bullet points only — no markdown headers, no asterisks, no bold formatting.`;
         }
 
         const msg = await anthropic.messages.create({
@@ -308,35 +296,39 @@ app.post('/api/ai/themes', async (req, res) => {
 
 You have been given the complete data from ALL groups across ALL phases. Your job is to produce a deep, honest, and actionable analysis.
 
-Return ONLY valid JSON with the following structure:
+Return ONLY valid JSON. No markdown, no backticks, no preamble. Use this exact structure:
 {
-  "executiveSummary": "A 4-5 sentence executive summary that covers: (1) the overall cultural reality today, (2) the shared vision across groups, (3) the size and nature of the transformation gap, (4) the common blockers, and (5) what this organization must prioritize to make the shift real. Be direct — this is for leadership.",
+  "executiveSummary": "4-5 sentences covering: todays cultural reality, the shared vision, the transformation gap, common blockers, and what leadership must prioritize. Be direct and specific.",
 
   "themes": [
-    "Theme 1: [Name] — [One sentence on what this theme reveals about culture and behaviour across groups]",
-    "Theme 2: [Name] — [One sentence on what this theme reveals about culture and behaviour across groups]",
-    "Theme 3: [Name] — [One sentence on what this theme reveals about culture and behaviour across groups]"
+    "Trust Erosion — one sentence on what this reveals about culture and behaviour",
+    "Structural Fragmentation — one sentence on what this reveals",
+    "Human-Performance Disconnect — one sentence on what this reveals"
   ],
 
   "behaviouralShifts": [
-    "From [current behaviour] → To [required behaviour]: [Why this shift is critical]",
-    "From [current behaviour] → To [required behaviour]: [Why this shift is critical]",
-    "From [current behaviour] → To [required behaviour]: [Why this shift is critical]"
+    "From hoarding decisions at the top → To distributing authority with clear accountability: without this shift no other change will stick",
+    "From silence out of fear → To candour as a protected behaviour: psychological safety is the prerequisite for every other intervention",
+    "From siloed execution → To cross-functional ownership: the commercial vision requires structural permission to collaborate"
   ],
 
   "priorityActions": [
-    "Action 1: [What] — [Why this must happen first across the organization]",
-    "Action 2: [What] — [Why this follows]",
-    "Action 3: [What] — [Why this is the long-term cultural anchor]"
+    "Leadership Behaviour Reset — senior leaders must visibly model intellectual humility and invite challenge before any programme will land",
+    "Structural Silo Intervention — establish cross-functional teams with shared goals and metrics so collaboration has structural permission",
+    "Recognition and Safety System — build merit-based recognition and protected channels for upward feedback as the long-term cultural anchor"
   ],
 
   "groupInsights": {
-    "common": "2-3 sentences on what ALL groups agreed on — the universal truths from today's session.",
-    "divergence": "2-3 sentences on where groups differed significantly — what this tells leadership about pockets of different readiness or different realities."
+    "common": "Write 2-3 sentences describing ONLY what every group explicitly agreed on — the problems, themes, or ambitions that appeared consistently across ALL groups without exception.",
+    "divergence": "Write 2-3 sentences describing ONLY where groups had DIFFERENT views, priorities, or levels of readiness — specific contrasts between groups. If only one group participated, describe what was absent from other groups and what that silence may signal about engagement or fear."
   }
 }
 
-Return ONLY the JSON object. No markdown, no backticks, no preamble.`;
+CRITICAL RULES:
+- The common and divergence fields MUST contain different content. Never repeat the same text in both.
+- divergence must describe genuine differences or contrasts between groups, not similarities.
+- All string values must be plain prose — no markdown, no bullet symbols, no asterisks inside the JSON values.
+- Return ONLY the JSON object.`;
 
         const msg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
