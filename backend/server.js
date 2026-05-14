@@ -124,11 +124,10 @@ app.put('/api/sessions/:code/groups/:num', async (req, res) => {
 });
 
 // --- AI ROUTES ---
-// --- AI ROUTES ---
 app.post('/api/ai/nudge', async (req, res) => {
     try {
         const msg = await anthropic.messages.create({
-            model: "claude-sonnet-4-6",
+            model: "claude-3-5-sonnet-20240620",
             max_tokens: 300,
             system: req.body.system,
             messages: [{ role: "user", content: req.body.user }]
@@ -142,13 +141,18 @@ app.post('/api/ai/nudge', async (req, res) => {
 
 app.post('/api/ai/automap', async (req, res) => {
     try {
+        let userContent = req.body.user;
+        if (typeof userContent === 'object') userContent = JSON.stringify(userContent);
+
         const msg = await anthropic.messages.create({
-            model: "claude-sonnet-4-6",
+            model: "claude-3-5-sonnet-20240620",
             max_tokens: 1500,
             system: req.body.system,
-            messages: [{ role: "user", content: req.body.user }]
+            messages: [{ role: "user", content: userContent }]
         });
-        res.json({ text: msg.content[0].text });
+        
+        let cleanText = msg.content[0].text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+        res.json({ text: cleanText });
     } catch (err) {
         console.error("Automap Error:", err);
         res.status(500).json({ error: err.message });
@@ -321,6 +325,63 @@ Return ONLY valid JSON. No markdown, no backticks, no preamble. Use this exact s
   "groupInsights": {
     "common": "Write 2-3 sentences describing ONLY what every group explicitly agreed on — the problems, themes, or ambitions that appeared consistently across ALL groups without exception.",
     "divergence": "Write 2-3 sentences describing ONLY where groups had DIFFERENT views, priorities, or levels of readiness — specific contrasts between groups. If only one group participated, describe what was absent from other groups and what that silence may signal about engagement or fear."
+  },
+
+  "seniorManagement": {
+    "context": "2-3 sentences grounding these commitments in the specific cultural reality this workshop surfaced — name the exact dynamics senior leaders are directly accountable for creating or allowing, and why the transformation cannot proceed without their visible, behavioural change first.",
+    "themes": [
+      "Theme Name — 3-4 sentences. Explain what this theme means specifically at the senior leadership level: what decision-making patterns, communication habits, or structural choices are sustaining this theme. Name what senior leaders are doing or not doing that keeps this theme alive. Be direct about accountability.",
+      "Theme Name — 3-4 sentences on the same depth and structure.",
+      "Theme Name — 3-4 sentences on the same depth and structure."
+    ],
+    "behaviours": [
+      "START: Name the behaviour, then 2-3 sentences explaining exactly what it looks like in practice, why it is currently absent, and what cultural signal it sends when senior leaders do it consistently. Be specific enough that a leader knows precisely what to do differently in their next meeting or decision.",
+      "STOP: Name the behaviour, then 2-3 sentences explaining what this behaviour currently looks like, the cultural damage it causes, and what changes when it stops. Connect it directly to something groups raised in the workshop.",
+      "SUSTAIN: Name the behaviour, then 2-3 sentences explaining why this must be protected and reinforced, what it would cost the transformation if it were lost, and how senior leaders should actively signal they are sustaining it."
+    ],
+    "actions": [
+      "Action Title — Specific: describe exactly what will be done, by whom, and in what format or forum. Measurable: state the concrete metric or observable output that proves this happened — not a feeling, a fact. Attainable: explain why this is realistic given current capacity and structure. Relevant: name the exact cultural gap from the workshop this closes and why it matters for the transformation. Time-bound: give a specific deadline — not a range, a date or number of weeks from the workshop.",
+      "Action Title — same full SMART structure, different gap addressed.",
+      "Action Title — same full SMART structure, different gap addressed."
+    ]
+  },
+
+  "middleManagement": {
+    "context": "2-3 sentences grounding these commitments in the position middle managers occupy — translating leadership intent into daily team reality while absorbing pressure from both directions. Name what the workshop data revealed about where this translation is currently breaking down and what that costs the organisation.",
+    "themes": [
+      "Theme Name — 3-4 sentences. Explain what this theme looks like at the team and department level: what patterns middle managers are reinforcing or failing to interrupt. Be specific about the daily behaviours and micro-decisions that sustain this theme at their level of the organisation.",
+      "Theme Name — 3-4 sentences on the same depth and structure.",
+      "Theme Name — 3-4 sentences on the same depth and structure."
+    ],
+    "behaviours": [
+      "START: Name the behaviour, then 2-3 sentences explaining exactly what it looks like in a team setting, why it is currently missing, and what it unlocks for team trust, performance, or clarity when middle managers adopt it consistently.",
+      "STOP: Name the behaviour, then 2-3 sentences explaining how this behaviour currently manifests at team level, the specific damage it does to psychological safety or performance, and what becomes possible when it stops.",
+      "SUSTAIN: Name the behaviour, then 2-3 sentences explaining why this must be protected at team level, what erosion looks like under pressure, and how managers should actively signal they are sustaining it even when it is difficult."
+    ],
+    "actions": [
+      "Action Title — Specific: describe exactly what the manager will do, with their team or peers, in what cadence or format. Measurable: state the concrete metric or output — a number, a deliverable, a visible change. Attainable: explain why a manager with a full workload can realistically execute this. Relevant: name the exact gap this closes at team level. Time-bound: specific deadline in weeks from the workshop.",
+      "Action Title — same full SMART structure, different gap addressed.",
+      "Action Title — same full SMART structure, different gap addressed."
+    ]
+  },
+
+  "individualContributors": {
+    "context": "2-3 sentences grounding these commitments in what individual contributors actually said — their specific frustrations, the things they felt unable to say or do, and what they need in terms of permission, safety, or clarity to show up differently. Make this feel like it was written for them, not about them.",
+    "themes": [
+      "Theme Name — 3-4 sentences. Explain what this theme means from the ground level: how it shows up in day-to-day work, what it costs individuals personally and professionally, and what shifts in their immediate environment would need to happen for this theme to change. Acknowledge the structural constraints they operate within.",
+      "Theme Name — 3-4 sentences on the same depth and structure.",
+      "Theme Name — 3-4 sentences on the same depth and structure."
+    ],
+    "behaviours": [
+      "START: Name the behaviour, then 2-3 sentences explaining exactly what it looks like in daily work, why it has felt unsafe or unnecessary until now, and what changes for the individual and their team when they begin doing it consistently.",
+      "STOP: Name the behaviour, then 2-3 sentences explaining how this behaviour currently shows up as a coping mechanism or habit, why it made sense in the old culture, and what it costs the team or the individual when it continues.",
+      "SUSTAIN: Name the behaviour, then 2-3 sentences explaining why this individual habit or practice is a genuine asset to the transformation, what erodes it under pressure, and how individuals can protect it even when the system around them is slow to change."
+    ],
+    "actions": [
+      "Action Title — Specific: describe exactly what the individual will do, in what context, and with what frequency. Measurable: state how the individual or their manager will know this is happening — a habit tracked, a conversation logged, a piece of work produced. Attainable: confirm this is within the individual's direct control and does not require structural permission they do not currently have. Relevant: connect this directly to a frustration or gap the groups named in the workshop. Time-bound: specific deadline in days or weeks — short enough to feel immediate.",
+      "Action Title — same full SMART structure, different gap addressed.",
+      "Action Title — same full SMART structure, different gap addressed."
+    ]
   }
 }
 
@@ -331,13 +392,15 @@ CRITICAL RULES:
 - Return ONLY the JSON object.`;
 
         const msg = await anthropic.messages.create({
-            model: "claude-sonnet-4-6",
-            max_tokens: 3000,
+            model: "claude-3-5-sonnet-20240620",
+            max_tokens: 4000, // Increased to 4000 to handle the larger JSON output
             system: sys,
             messages: [{ role: "user", content: req.body.data }]
         });
 
-        res.json({ text: msg.content[0].text });
+        // Strip markdown to prevent JSON parse errors on frontend
+        let cleanJsonText = msg.content[0].text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+        res.json({ text: cleanJsonText });
     } catch (err) {
         console.error("Themes Error:", err);
         res.status(500).json({ error: err.message });
