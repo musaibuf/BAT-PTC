@@ -121,8 +121,20 @@ async function generateSummary(data, phase) {
 async function generateThemes(data) {
   try {
     const r = await fetch(`${API_URL}/ai/themes`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({data: JSON.stringify(data)}) });
-    const d = await r.json(); return JSON.parse(d.text.replace(/```json|```/g,"").trim());
-  } catch { return { executiveSummary: "Summary unavailable.", themes: ["Theme 1", "Theme 2", "Theme 3"] }; }
+    const d = await r.json(); 
+    
+    // Safely extract JSON even if Claude adds conversational text before/after it
+    const text = d.text;
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start !== -1 && end !== -1) {
+      return JSON.parse(text.substring(start, end + 1));
+    }
+    return JSON.parse(text.replace(/```json|```/g,"").trim());
+  } catch (e) { 
+    console.error("JSON Parse Error:", e);
+    return { executiveSummary: "Summary unavailable.", themes: ["Theme 1", "Theme 2", "Theme 3"] }; 
+  }
 }
 
 function genCode() { const c="ABCDEFGHJKLMNPQRSTUVWXYZ"; let s=""; for (let i=0;i<4;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
@@ -917,9 +929,56 @@ const handlePPTX = async () => {
       });
     }
 
-    // ── SLIDE 6: OPM Gap Overview ───────────────────────────────────────────
-   // ── SLIDE 6: OPM Gap Overview — AI gap summary per element ─────────────
-    let s6 = pres.addSlide();
+    // ── NEW SLIDES: Management & Contributor Shifts ─────────────────────────
+    const levels = [
+      { key: "seniorManagement", title: "SENIOR MANAGEMENT COMMITMENTS", bg: DARK },
+      { key: "middleManagement", title: "MIDDLE MANAGEMENT SHIFTS", bg: NAVY },
+      { key: "individualContributors", title: "INDIVIDUAL CONTRIBUTOR SHIFTS", bg: "1e56a8" }
+    ];
+
+    levels.forEach(lvl => {
+      const data = aiData[lvl.key];
+      if (!data) return;
+
+      let sLvl = pres.addSlide();
+      sLvl.background = { color: "F4F6FB" };
+      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 10, h: 0.9, fill: { color: lvl.bg }, line: { color: lvl.bg } });
+      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0.9, w: 10, h: 0.06, fill: { color: GOLD }, line: { color: GOLD } });
+      sLvl.addText(lvl.title, { x: 0.5, y: 0.18, w: 9, h: 0.55, fontSize: 20, bold: true, color: WHITE });
+
+      // Context Box
+      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 1.1, w: 9.2, h: 0.8, fill: { color: WHITE }, line: { color: "dde5f0" }, shadow: mkShadow() });
+      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 1.1, w: 0.06, h: 0.8, fill: { color: GOLD }, line: { color: GOLD } });
+      sLvl.addText("CONTEXT", { x: 0.55, y: 1.15, w: 2, h: 0.2, fontSize: 8, bold: true, color: NAVY, charSpacing: 2 });
+      sLvl.addText(plain(data.context || ""), { x: 0.55, y: 1.35, w: 8.9, h: 0.5, fontSize: 10, color: GREY, wrap: true, italic: true });
+
+      // Themes (Left)
+      sLvl.addText("KEY THEMES", { x: 0.4, y: 2.05, w: 4.4, h: 0.25, fontSize: 9, bold: true, color: NAVY, charSpacing: 2 });
+      const themeItems = (data.themes || []).map((t, i) => ({ text: plain(t), options: { bullet: true, breakLine: i < data.themes.length - 1, fontSize: 10, color: GREY, paraSpaceAfter: 6 } }));
+      sLvl.addText(themeItems, { x: 0.4, y: 2.3, w: 4.4, h: 1.5 });
+
+      // Behaviours (Right)
+      sLvl.addText("CRITICAL BEHAVIOURS", { x: 5.2, y: 2.05, w: 4.4, h: 0.25, fontSize: 9, bold: true, color: NAVY, charSpacing: 2 });
+      const behItems = (data.behaviours || []).map((b, i) => {
+        const bp = plain(b);
+        const colonIdx = bp.indexOf(":");
+        if (colonIdx > -1) {
+          return [
+            { text: bp.substring(0, colonIdx + 1) + " ", options: { bold: true, fontSize: 10, color: DARK } },
+            { text: bp.substring(colonIdx + 1), options: { breakLine: i < data.behaviours.length - 1, fontSize: 10, color: GREY, paraSpaceAfter: 6 } }
+          ];
+        }
+        return { text: bp, options: { bullet: true, breakLine: i < data.behaviours.length - 1, fontSize: 10, color: GREY, paraSpaceAfter: 6 } };
+      }).flat();
+      sLvl.addText(behItems, { x: 5.2, y: 2.3, w: 4.4, h: 1.5 });
+
+      // Actions (Bottom)
+      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 3.9, w: 9.2, h: 1.3, fill: { color: "fffbea" }, line: { color: "f0e0a0" } });
+      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 3.9, w: 9.2, h: 0.25, fill: { color: GOLD }, line: { color: GOLD } });
+      sLvl.addText("REQUIRED ACTIONS", { x: 0.5, y: 3.92, w: 4, h: 0.2, fontSize: 8, bold: true, color: DARK, charSpacing: 2 });
+      const actItems = (data.actions || []).map((a, i) => ({ text: plain(a), options: { bullet: true, breakLine: i < data.actions.length - 1, fontSize: 10, color: "5a4000", paraSpaceAfter: 4 } }));
+      sLvl.addText(actItems, { x: 0.5, y: 4.2, w: 9.0, h: 0.9 });
+    });
     s6.background = { color:"F4F6FB" };
     s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:NAVY }, line:{ color:NAVY } });
     s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
@@ -1026,28 +1085,55 @@ const handlePPTX = async () => {
         ps.addText("SUMMARY", { x:0.58, y:1.08, w:1.5, h:0.22, fontSize:8, bold:true, color:NAVY, charSpacing:2 });
         ps.addText(summary3 || plain(raw).substring(0,180), { x:0.58, y:1.28, w:8.9, h:0.55, fontSize:11, color:GREY, wrap:true, italic:true });
 
-        // Bullet insights
-        if (blist.length) {
-          // Split bullets: first 3 = insights, rest = actionable steps
-          const insightBullets = blist.slice(0,3);
-          const actionBullets  = blist.slice(3,6);
+        // Parse sections dynamically based on AI headers
+        const sections = [];
+        let currentHeader = "KEY INSIGHTS";
+        let currentBullets = [];
+        
+        const lines = plain(raw).split("\n").map(l => l.trim()).filter(l => l);
+        let inSummary = false;
+        
+        lines.forEach(line => {
+          if (line === "SUMMARY") { inSummary = true; return; }
+          
+          // Detect headers (All caps, short, no punctuation at start)
+          if (/^[A-Z\s]+$/.test(line) && line.length > 3 && line.length < 35) {
+            inSummary = false;
+            if (currentBullets.length > 0) {
+              sections.push({ header: currentHeader, bullets: currentBullets });
+              currentBullets = [];
+            }
+            currentHeader = line;
+          } else if (!inSummary) {
+            // Clean up bullet points
+            const cleanLine = line.replace(/^[-\*•\d\.]+\s*/, "").trim();
+            if (cleanLine.length > 10) currentBullets.push(cleanLine);
+          }
+        });
+        if (currentBullets.length > 0) {
+          sections.push({ header: currentHeader, bullets: currentBullets });
+        }
 
-          // Left column — Key Insights
-          ps.addText("KEY INSIGHTS", { x:0.5, y:2.05, w:4.5, h:0.28, fontSize:9, bold:true, color:NAVY, charSpacing:2 });
-          const insightItems = insightBullets.map((l,idx)=>({
-            text:l, options:{ bullet:true, breakLine:idx<insightBullets.length-1, fontSize:11, color:GREY, paraSpaceAfter:6 }
+        // Render up to 2 columns
+        if (sections.length > 0) {
+          // Left column
+          const leftSec = sections[0];
+          ps.addText(leftSec.header, { x:0.5, y:2.05, w:4.5, h:0.28, fontSize:9, bold:true, color:NAVY, charSpacing:2 });
+          const leftItems = leftSec.bullets.slice(0,4).map((l,idx)=>({
+            text:l, options:{ bullet:true, breakLine:idx<3, fontSize:11, color:GREY, paraSpaceAfter:6 }
           }));
-          ps.addText(insightItems, { x:0.5, y:2.38, w:4.5, h:2.8 });
+          ps.addText(leftItems, { x:0.5, y:2.38, w:4.5, h:2.8 });
 
-          // Right column — Actionable Steps (from AI or derived)
-          if (actionBullets.length) {
+          // Right column
+          if (sections.length > 1) {
+            const rightSec = sections[1];
             ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:3.3, fill:{ color:"fffbea" }, line:{ color:"f0e0a0" } });
             ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:0.35, fill:{ color:GOLD }, line:{ color:GOLD } });
-            ps.addText("ACTIONABLE STEPS", { x:5.3, y:2.06, w:4.2, h:0.22, fontSize:8, bold:true, color:DARK, charSpacing:2 });
-            const actionItems = actionBullets.map((l,idx)=>({
-              text:l, options:{ bullet:true, breakLine:idx<actionBullets.length-1, fontSize:11, color:"5a4000", paraSpaceAfter:6 }
+            ps.addText(rightSec.header, { x:5.3, y:2.06, w:4.2, h:0.22, fontSize:8, bold:true, color:DARK, charSpacing:2 });
+            const rightItems = rightSec.bullets.slice(0,4).map((l,idx)=>({
+              text:l, options:{ bullet:true, breakLine:idx<3, fontSize:11, color:"5a4000", paraSpaceAfter:6 }
             }));
-            ps.addText(actionItems, { x:5.3, y:2.42, w:4.2, h:2.7 });
+            ps.addText(rightItems, { x:5.3, y:2.42, w:4.2, h:2.7 });
           }
         }
       });
