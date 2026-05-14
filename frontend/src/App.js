@@ -853,7 +853,7 @@ const handlePPTX = async () => {
           else { fromPart = sp; toPart = ""; }
         }
         // strip trailing colon/reason from toPart for display
-        toPart = toPart.replace(/\s*[:\-—].*$/,"").trim();
+        toPart = toPart.trim();
         const yy = 1.05 + i*1.1;
         s3.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:9.2, h:0.95, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
         s3.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:0.06, h:0.95, fill:{ color:GOLD }, line:{ color:GOLD } });
@@ -945,13 +945,24 @@ levels.forEach(lvl => {
   if (!data) return;
 
   // Helper: truncate at last complete sentence within char limit
-  const truncateSentence = (text, maxChars) => {
-    const t = plain(text || "");
-    if (t.length <= maxChars) return t;
-    const cut = t.substring(0, maxChars);
-    const lastPeriod = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
-    return lastPeriod > maxChars * 0.5 ? cut.substring(0, lastPeriod + 1) : cut.substring(0, cut.lastIndexOf(" ")) + "…";
-  };
+const truncateSentence = (text, maxChars) => {
+  const t = plain(text || "");
+  if (t.length <= maxChars) return t;
+  // Only cut at a real sentence end (. ! ?) — never at a comma
+  const cut = t.substring(0, maxChars);
+  const lastSentence = Math.max(
+    cut.lastIndexOf(". "),
+    cut.lastIndexOf("! "),
+    cut.lastIndexOf("? ")
+  );
+  // Only use sentence boundary if it's in the last 40% of the cut — otherwise just use full text up to limit
+  if (lastSentence > maxChars * 0.6) {
+    return cut.substring(0, lastSentence + 1);
+  }
+  // Fall back: cut at last space to avoid mid-word, add ellipsis
+  const lastSpace = cut.lastIndexOf(" ");
+  return cut.substring(0, lastSpace) + "…";
+};
 
   // ── SLIDE A: Context + Themes ──────────────────────────────────────────
   let sA = pres.addSlide();
@@ -960,7 +971,7 @@ levels.forEach(lvl => {
   sA.addText(lvl.title, { x:0.5, y:0.2, w:9, h:0.5, fontSize:18, bold:true, color:WHITE });
 
   // Context — 2 lines max, full sentences
-  const ctxText = truncateSentence(data.context || "", 280);
+const ctxText = truncateSentence(data.context || "", 420);
   sA.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.0, w:9.2, h:1.0, fill:{ color:"fffbea" }, line:{ color:"f0e0a0" } });
   sA.addText(ctxText, { x:0.65, y:1.05, w:8.7, h:0.9, fontSize:10.5, color:"5a4000", italic:true, wrap:true, valign:"middle" });
 
@@ -973,7 +984,7 @@ levels.forEach(lvl => {
     const themeName = dashIdx > -1 ? tp.substring(0, dashIdx).trim() : tp.substring(0, 40).trim();
     // Get full body — all text after the dash, truncated at sentence boundary
     const rawBody = dashIdx > -1 ? tp.substring(dashIdx + 3) : tp;
-    const themeBody = truncateSentence(rawBody, 320);
+const themeBody = truncateSentence(rawBody, 500);
     const xPos = 0.4 + i * 3.07;
     sA.addShape(pres.shapes.RECTANGLE, { x:xPos, y:2.45, w:2.9, h:2.7, fill:{ color:themeColors[i] }, line:{ color:themeColors[i] }, shadow:mkShadow() });
     sA.addText(themeName, { x:xPos+0.15, y:2.52, w:2.6, h:0.42, fontSize:11, bold:true, color:GOLD, wrap:true, shrinkText:true });
@@ -997,7 +1008,7 @@ levels.forEach(lvl => {
       stripped.indexOf(". ") > -1 ? stripped.indexOf(". ") : 999,
       stripped.indexOf(", ") > 30 ? stripped.indexOf(", ") : 999
     );
-    const bodyText = truncateSentence(stripped, 340);
+const bodyText = truncateSentence(stripped, 520);
     const yy = 1.0 + i * 1.45;
     const rowH = 1.28;
     sB.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:1.2, h:rowH, fill:{ color:behavColors[i] }, line:{ color:behavColors[i] } });
@@ -1017,7 +1028,7 @@ levels.forEach(lvl => {
     const dashIdx = ap.indexOf(" — ");
     const actionTitle = dashIdx > -1 ? ap.substring(0, dashIdx).trim() : ap.substring(0, 50).trim();
     const rawReason = dashIdx > -1 ? ap.substring(dashIdx + 3) : ap;
-    const actionBody = truncateSentence(rawReason, 400);
+const actionBody = truncateSentence(rawReason, 600);
     const yy = 1.0 + i * 1.45;
     const cardH = 1.28;
     // Number badge
@@ -1165,17 +1176,18 @@ lines.forEach(line => {
     currentHeader = line;
   } else if (!inSummary) {
     const cleanLine = line.replace(/^[-\*•\d\.]+\s*/, "").trim();
-    // Truncate each bullet at sentence boundary, max 120 chars
-    if (cleanLine.length > 10) {
-      const truncated = cleanLine.length > 120
-        ? (() => {
-            const cut = cleanLine.substring(0, 120);
-            const lp = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf(", "));
-            return lp > 60 ? cut.substring(0, lp + 1) : cut.substring(0, cut.lastIndexOf(" ")) + "…";
-          })()
-        : cleanLine;
-      currentBullets.push(truncated);
-    }
+// REPLACE the truncation logic with:
+if (cleanLine.length > 10 && !HEADER_PATTERN.test(cleanLine) && !/^[A-Z\s]{10,}$/.test(cleanLine)) {
+  // Cut only at sentence end, not comma — 150 chars
+  const truncated = cleanLine.length > 150
+    ? (() => {
+        const cut = cleanLine.substring(0, 150);
+        const lp = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+        return lp > 80 ? cut.substring(0, lp + 1) : cut.substring(0, cut.lastIndexOf(" ")) + "…";
+      })()
+    : cleanLine;
+  currentBullets.push(truncated);
+}
   }
 });
 if (currentBullets.length > 0) sections.push({ header: currentHeader, bullets: currentBullets });
@@ -1184,20 +1196,20 @@ if (currentBullets.length > 0) sections.push({ header: currentHeader, bullets: c
 if (sections.length > 0) {
   const leftSec = sections[0];
   ps.addText(leftSec.header, { x:0.5, y:2.05, w:4.5, h:0.28, fontSize:9, bold:true, color:NAVY, charSpacing:2 });
-  const leftItems = leftSec.bullets.slice(0, 4).map((l, idx) => ({
-    text: l, options:{ bullet:true, breakLine:idx < 3, fontSize:10.5, color:GREY, paraSpaceAfter:5 }
-  }));
-  ps.addText(leftItems, { x:0.5, y:2.38, w:4.5, h:2.8 });
+  const leftItems = leftSec.bullets.slice(0, 5).map((l, idx) => ({
+  text: l, options:{ bullet:true, breakLine:idx < leftSec.bullets.slice(0,5).length - 1, fontSize:10, color:GREY, paraSpaceAfter:4 }
+}));
+ps.addText(leftItems, { x:0.5, y:2.38, w:4.5, h:3.0 });
 
   if (sections.length > 1) {
     const rightSec = sections[1];
     ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:3.3, fill:{ color:"fffbea" }, line:{ color:"f0e0a0" } });
     ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:0.35, fill:{ color:GOLD }, line:{ color:GOLD } });
     ps.addText(rightSec.header, { x:5.3, y:2.06, w:4.2, h:0.22, fontSize:8, bold:true, color:DARK, charSpacing:2 });
-    const rightItems = rightSec.bullets.slice(0, 4).map((l, idx) => ({
-      text: l, options:{ bullet:true, breakLine:idx < 3, fontSize:10.5, color:"5a4000", paraSpaceAfter:5 }
-    }));
-    ps.addText(rightItems, { x:5.3, y:2.42, w:4.2, h:2.7 });
+    const rightItems = rightSec.bullets.slice(0, 5).map((l, idx) => ({
+  text: l, options:{ bullet:true, breakLine:idx < rightSec.bullets.slice(0,5).length - 1, fontSize:10, color:"5a4000", paraSpaceAfter:4 }
+}));
+ps.addText(rightItems, { x:5.3, y:2.42, w:4.2, h:3.0 });
   }
 }
       });
