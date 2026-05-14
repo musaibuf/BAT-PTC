@@ -1063,7 +1063,7 @@ const handlePPTX = async () => {
       phaseMeta.forEach(pm => {
         const raw = g.summaries?.[pm.key];
         if (!raw) return;
-        const blist = bullets(raw, 7);
+        // const blist = bullets(raw, 7);
         const summary3 = (() => {
           const cleaned = plain(raw)
             .split("\n")
