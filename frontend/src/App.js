@@ -121,19 +121,23 @@ async function generateSummary(data, phase) {
 async function generateThemes(data) {
   try {
     const r = await fetch(`${API_URL}/ai/themes`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({data: JSON.stringify(data)}) });
-    const d = await r.json(); 
-    
-    // Safely extract JSON even if Claude adds conversational text before/after it
+    const d = await r.json();
     const text = d.text;
+
+    // Find the outermost { } even if there's trailing garbage
     const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start !== -1 && end !== -1) {
-      return JSON.parse(text.substring(start, end + 1));
+    let depth = 0, end = -1;
+    for (let i = start; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
     }
-    return JSON.parse(text.replace(/```json|```/g,"").trim());
-  } catch (e) { 
+
+    if (start === -1 || end === -1) throw new Error("No JSON object found");
+    return JSON.parse(text.substring(start, end + 1));
+
+  } catch (e) {
     console.error("JSON Parse Error:", e);
-    return { executiveSummary: "Summary unavailable.", themes: ["Theme 1", "Theme 2", "Theme 3"] }; 
+    return { executiveSummary: "Summary unavailable.", themes: ["Theme 1", "Theme 2", "Theme 3"] };
   }
 }
 

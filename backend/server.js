@@ -392,8 +392,8 @@ CRITICAL RULES:
 - Return ONLY the JSON object.`;
 
         const msg = await anthropic.messages.create({
-            model: "claude-opus-4-7",
-            max_tokens: 4000, // Increased to 4000 to handle the larger JSON output
+            model: "claude-sonnet-4-6",
+max_tokens: 8000, // Increased to 4000 to handle the larger JSON output
             system: sys,
             messages: [{ role: "user", content: req.body.data }]
         });
