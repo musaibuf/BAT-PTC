@@ -941,48 +941,72 @@ const handlePPTX = async () => {
     ];
 
     levels.forEach(lvl => {
-      const data = aiData[lvl.key];
-      if (!data) return;
+  const data = aiData[lvl.key];
+  if (!data) return;
 
-      let sLvl = pres.addSlide();
-      sLvl.background = { color: "F4F6FB" };
-      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 10, h: 0.9, fill: { color: lvl.bg }, line: { color: lvl.bg } });
-      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0.9, w: 10, h: 0.06, fill: { color: GOLD }, line: { color: GOLD } });
-      sLvl.addText(lvl.title, { x: 0.5, y: 0.18, w: 9, h: 0.55, fontSize: 20, bold: true, color: WHITE });
+  // ── SLIDE: Context + Themes ─────────────────────────────────────────────
+  let sA = pres.addSlide();
+  sA.background = { color: "F4F6FB" };
+  sA.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.85, fill:{ color:lvl.bg }, line:{ color:lvl.bg } });
+  sA.addText(lvl.title, { x:0.5, y:0.18, w:9, h:0.5, fontSize:18, bold:true, color:WHITE });
 
-      // Context Box
-      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 1.1, w: 9.2, h: 0.8, fill: { color: WHITE }, line: { color: "dde5f0" }, shadow: mkShadow() });
-      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 1.1, w: 0.06, h: 0.8, fill: { color: GOLD }, line: { color: GOLD } });
-      sLvl.addText("CONTEXT", { x: 0.55, y: 1.15, w: 2, h: 0.2, fontSize: 8, bold: true, color: NAVY, charSpacing: 2 });
-      sLvl.addText(plain(data.context || ""), { x: 0.55, y: 1.35, w: 8.9, h: 0.5, fontSize: 10, color: GREY, wrap: true, italic: true });
+  // Context box
+  const ctxText = plain(data.context || "").substring(0, 220);
+  sA.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.0, w:9.2, h:0.9, fill:{ color:"fffbea" }, line:{ color:"f0e0a0" } });
+  sA.addText(ctxText, { x:0.6, y:1.05, w:8.8, h:0.8, fontSize:10, color:"5a4000", italic:true, wrap:true, valign:"middle" });
 
-      // Themes (Left)
-      sLvl.addText("KEY THEMES", { x: 0.4, y: 2.05, w: 4.4, h: 0.25, fontSize: 9, bold: true, color: NAVY, charSpacing: 2 });
-      const themeItems = (data.themes || []).map((t, i) => ({ text: plain(t), options: { bullet: true, breakLine: i < data.themes.length - 1, fontSize: 10, color: GREY, paraSpaceAfter: 6 } }));
-      sLvl.addText(themeItems, { x: 0.4, y: 2.3, w: 4.4, h: 1.5 });
+  // Themes — 3 cards side by side
+  sA.addText("KEY THEMES", { x:0.4, y:2.05, w:9, h:0.25, fontSize:9, bold:true, color:NAVY, charSpacing:3 });
+  const themeColors = [NAVY, "1e56a8", "2660C0"];
+  (data.themes || []).slice(0,3).forEach((t, i) => {
+    const tp = plain(t);
+    // Extract theme name (before " — " or first sentence)
+    const dashIdx = tp.indexOf(" — ");
+    const themeName = dashIdx > -1 ? tp.substring(0, dashIdx) : tp.substring(0, 30);
+    const themeBody = dashIdx > -1 ? tp.substring(dashIdx + 3, dashIdx + 160) : tp.substring(0, 160);
+    const xPos = 0.4 + i * 3.1;
+    sA.addShape(pres.shapes.RECTANGLE, { x:xPos, y:2.38, w:2.9, h:2.8, fill:{ color:themeColors[i] }, line:{ color:themeColors[i] }, shadow:mkShadow() });
+    sA.addText(themeName, { x:xPos+0.15, y:2.48, w:2.6, h:0.35, fontSize:10, bold:true, color:GOLD, wrap:true, shrinkText:true });
+    sA.addText(themeBody, { x:xPos+0.15, y:2.88, w:2.6, h:2.15, fontSize:9, color:"cce0ff", wrap:true, valign:"top" });
+  });
 
-      // Behaviours (Right)
-      sLvl.addText("CRITICAL BEHAVIOURS", { x: 5.2, y: 2.05, w: 4.4, h: 0.25, fontSize: 9, bold: true, color: NAVY, charSpacing: 2 });
-      const behItems = (data.behaviours || []).map((b, i) => {
-        const bp = plain(b);
-        const colonIdx = bp.indexOf(":");
-        if (colonIdx > -1) {
-          return [
-            { text: bp.substring(0, colonIdx + 1) + " ", options: { bold: true, fontSize: 10, color: DARK } },
-            { text: bp.substring(colonIdx + 1), options: { breakLine: i < data.behaviours.length - 1, fontSize: 10, color: GREY, paraSpaceAfter: 6 } }
-          ];
-        }
-        return { text: bp, options: { bullet: true, breakLine: i < data.behaviours.length - 1, fontSize: 10, color: GREY, paraSpaceAfter: 6 } };
-      }).flat();
-      sLvl.addText(behItems, { x: 5.2, y: 2.3, w: 4.4, h: 1.5 });
+  // ── SLIDE: Behaviours + Actions ─────────────────────────────────────────
+  let sB = pres.addSlide();
+  sB.background = { color:"F4F6FB" };
+  sB.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.85, fill:{ color:lvl.bg }, line:{ color:lvl.bg } });
+  sB.addText(`${lvl.title} — BEHAVIOURS & ACTIONS`, { x:0.5, y:0.18, w:9, h:0.5, fontSize:16, bold:true, color:WHITE });
 
-      // Actions (Bottom)
-      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 3.9, w: 9.2, h: 1.3, fill: { color: "fffbea" }, line: { color: "f0e0a0" } });
-      sLvl.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 3.9, w: 9.2, h: 0.25, fill: { color: GOLD }, line: { color: GOLD } });
-      sLvl.addText("REQUIRED ACTIONS", { x: 0.5, y: 3.92, w: 4, h: 0.2, fontSize: 8, bold: true, color: DARK, charSpacing: 2 });
-      const actItems = (data.actions || []).map((a, i) => ({ text: plain(a), options: { bullet: true, breakLine: i < data.actions.length - 1, fontSize: 10, color: "5a4000", paraSpaceAfter: 4 } }));
-      sLvl.addText(actItems, { x: 0.5, y: 4.2, w: 9.0, h: 0.9 });
-    });
+  // START / STOP / SUSTAIN — 3 rows
+  const behavLabels = ["START", "STOP", "SUSTAIN"];
+  const behavColors = ["166534", "C0392B", "17468B"];
+  (data.behaviours || []).slice(0,3).forEach((b, i) => {
+    const bp = plain(b);
+    // Strip "START:", "STOP:", "SUSTAIN:" prefix if present
+    const colonIdx = bp.indexOf(":");
+    const label = behavLabels[i];
+    const bodyText = colonIdx > -1 ? bp.substring(colonIdx + 1).trim().substring(0, 180) : bp.substring(0, 180);
+    const yy = 1.0 + i * 1.0;
+    sB.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:1.1, h:0.8, fill:{ color:behavColors[i] }, line:{ color:behavColors[i] } });
+    sB.addText(label, { x:0.4, y:yy+0.25, w:1.1, h:0.3, fontSize:10, bold:true, color:WHITE, align:"center" });
+    sB.addShape(pres.shapes.RECTANGLE, { x:1.6, y:yy, w:8.0, h:0.8, fill:{ color:WHITE }, line:{ color:"dde5f0" } });
+    sB.addText(bodyText, { x:1.75, y:yy+0.08, w:7.7, h:0.65, fontSize:10, color:GREY, wrap:true, shrinkText:true });
+  });
+
+  // Actions — 3 compact cards
+  sB.addText("REQUIRED ACTIONS", { x:0.4, y:4.05, w:9, h:0.25, fontSize:9, bold:true, color:NAVY, charSpacing:3 });
+  (data.actions || []).slice(0,3).forEach((a, i) => {
+    const ap = plain(a);
+    const dashIdx = ap.indexOf(" — ");
+    const actionTitle = dashIdx > -1 ? ap.substring(0, dashIdx) : ap.substring(0, 35);
+    const actionBody  = dashIdx > -1 ? ap.substring(dashIdx + 3, dashIdx + 130) : ap.substring(0, 130);
+    const xPos = 0.4 + i * 3.1;
+    sB.addShape(pres.shapes.RECTANGLE, { x:xPos, y:4.35, w:2.9, h:0.9, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
+    sB.addShape(pres.shapes.RECTANGLE, { x:xPos, y:4.35, w:2.9, h:0.25, fill:{ color:GOLD }, line:{ color:GOLD } });
+    sB.addText(`${i+1}. ${actionTitle}`, { x:xPos+0.1, y:4.37, w:2.7, h:0.2, fontSize:8, bold:true, color:DARK });
+    sB.addText(actionBody, { x:xPos+0.1, y:4.62, w:2.7, h:0.6, fontSize:8, color:GREY, wrap:true, shrinkText:true });
+  });
+});
+
     let s6 = pres.addSlide();
     s6.background = { color:"F4F6FB" };
     s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:NAVY }, line:{ color:NAVY } });
