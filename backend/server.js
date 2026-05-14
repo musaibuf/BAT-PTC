@@ -282,7 +282,7 @@ TRANSFORMATION STORY
 
         const msg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
-            max_tokens: 800,
+            max_tokens: 3000,
             system: sys,
             messages: [{ role: "user", content: data }]
         });
