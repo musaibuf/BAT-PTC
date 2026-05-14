@@ -847,9 +847,13 @@ const handlePPTX = async () => {
           fromPart = parts[0].replace(/^From\s*/i,"").trim();
           toPart   = parts[1]?.replace(/^To\s*/i,"").replace(/^:\s*/,"").trim() || "";
         } else {
-          // match "from X to Y" pattern case-insensitively
-          const m = sp.match(/^From\s+(.+?)\s+to\s+(.+?)(?:\s*[:\-—].*)?$/i);
-          if (m) { fromPart = m[1].trim(); toPart = m[2].trim(); }
+          // match "from X to Y" pattern case-insensitively, grabbing everything after "to "
+          const m = sp.match(/^From\s+(.+?)\s+to\s+(.+)$/i);
+          if (m) { 
+            fromPart = m[1].trim(); 
+            // safely strip trailing explanations ONLY if they are separated by spaces or a colon
+            toPart = m[2].trim().split(/\s+[—\-]\s+/)[0].split(/:\s+/)[0].trim();
+          }
           else { fromPart = sp; toPart = ""; }
         }
         // strip trailing colon/reason from toPart for display
