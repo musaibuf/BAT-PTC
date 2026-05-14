@@ -979,7 +979,10 @@ const handlePPTX = async () => {
       const actItems = (data.actions || []).map((a, i) => ({ text: plain(a), options: { bullet: true, breakLine: i < data.actions.length - 1, fontSize: 10, color: "5a4000", paraSpaceAfter: 4 } }));
       sLvl.addText(actItems, { x: 0.5, y: 4.2, w: 9.0, h: 0.9 });
     });
+    let s6 = pres.addSlide();
     s6.background = { color:"F4F6FB" };
+    s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:NAVY }, line:{ color:NAVY } });
+    s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
     s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:NAVY }, line:{ color:NAVY } });
     s6.addShape(pres.shapes.RECTANGLE, { x:0, y:0.9, w:10, h:0.06, fill:{ color:GOLD }, line:{ color:GOLD } });
     s6.addText("THE TRANSFORMATION GAP — 6 DESIGN ELEMENTS", { x:0.5, y:0.18, w:9, h:0.55, fontSize:18, bold:true, color:WHITE });
