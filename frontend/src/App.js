@@ -940,70 +940,94 @@ const handlePPTX = async () => {
       { key: "individualContributors", title: "INDIVIDUAL CONTRIBUTOR SHIFTS", bg: "1e56a8" }
     ];
 
-    levels.forEach(lvl => {
+levels.forEach(lvl => {
   const data = aiData[lvl.key];
   if (!data) return;
 
-  // ── SLIDE: Context + Themes ─────────────────────────────────────────────
+  // Helper: truncate at last complete sentence within char limit
+  const truncateSentence = (text, maxChars) => {
+    const t = plain(text || "");
+    if (t.length <= maxChars) return t;
+    const cut = t.substring(0, maxChars);
+    const lastPeriod = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+    return lastPeriod > maxChars * 0.5 ? cut.substring(0, lastPeriod + 1) : cut.substring(0, cut.lastIndexOf(" ")) + "…";
+  };
+
+  // ── SLIDE A: Context + Themes ──────────────────────────────────────────
   let sA = pres.addSlide();
   sA.background = { color: "F4F6FB" };
   sA.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.85, fill:{ color:lvl.bg }, line:{ color:lvl.bg } });
-  sA.addText(lvl.title, { x:0.5, y:0.18, w:9, h:0.5, fontSize:18, bold:true, color:WHITE });
+  sA.addText(lvl.title, { x:0.5, y:0.2, w:9, h:0.5, fontSize:18, bold:true, color:WHITE });
 
-  // Context box
-  const ctxText = plain(data.context || "").substring(0, 220);
-  sA.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.0, w:9.2, h:0.9, fill:{ color:"fffbea" }, line:{ color:"f0e0a0" } });
-  sA.addText(ctxText, { x:0.6, y:1.05, w:8.8, h:0.8, fontSize:10, color:"5a4000", italic:true, wrap:true, valign:"middle" });
+  // Context — 2 lines max, full sentences
+  const ctxText = truncateSentence(data.context || "", 280);
+  sA.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.0, w:9.2, h:1.0, fill:{ color:"fffbea" }, line:{ color:"f0e0a0" } });
+  sA.addText(ctxText, { x:0.65, y:1.05, w:8.7, h:0.9, fontSize:10.5, color:"5a4000", italic:true, wrap:true, valign:"middle" });
 
-  // Themes — 3 cards side by side
-  sA.addText("KEY THEMES", { x:0.4, y:2.05, w:9, h:0.25, fontSize:9, bold:true, color:NAVY, charSpacing:3 });
+  // Themes — 3 tall cards with enough room for full sentences
+  sA.addText("KEY THEMES", { x:0.4, y:2.15, w:9, h:0.25, fontSize:9, bold:true, color:NAVY, charSpacing:3 });
   const themeColors = [NAVY, "1e56a8", "2660C0"];
-  (data.themes || []).slice(0,3).forEach((t, i) => {
+  (data.themes || []).slice(0, 3).forEach((t, i) => {
     const tp = plain(t);
-    // Extract theme name (before " — " or first sentence)
     const dashIdx = tp.indexOf(" — ");
-    const themeName = dashIdx > -1 ? tp.substring(0, dashIdx) : tp.substring(0, 30);
-    const themeBody = dashIdx > -1 ? tp.substring(dashIdx + 3, dashIdx + 160) : tp.substring(0, 160);
-    const xPos = 0.4 + i * 3.1;
-    sA.addShape(pres.shapes.RECTANGLE, { x:xPos, y:2.38, w:2.9, h:2.8, fill:{ color:themeColors[i] }, line:{ color:themeColors[i] }, shadow:mkShadow() });
-    sA.addText(themeName, { x:xPos+0.15, y:2.48, w:2.6, h:0.35, fontSize:10, bold:true, color:GOLD, wrap:true, shrinkText:true });
-    sA.addText(themeBody, { x:xPos+0.15, y:2.88, w:2.6, h:2.15, fontSize:9, color:"cce0ff", wrap:true, valign:"top" });
+    const themeName = dashIdx > -1 ? tp.substring(0, dashIdx).trim() : tp.substring(0, 40).trim();
+    // Get full body — all text after the dash, truncated at sentence boundary
+    const rawBody = dashIdx > -1 ? tp.substring(dashIdx + 3) : tp;
+    const themeBody = truncateSentence(rawBody, 320);
+    const xPos = 0.4 + i * 3.07;
+    sA.addShape(pres.shapes.RECTANGLE, { x:xPos, y:2.45, w:2.9, h:2.7, fill:{ color:themeColors[i] }, line:{ color:themeColors[i] }, shadow:mkShadow() });
+    sA.addText(themeName, { x:xPos+0.15, y:2.52, w:2.6, h:0.42, fontSize:11, bold:true, color:GOLD, wrap:true, shrinkText:true });
+    sA.addText(themeBody, { x:xPos+0.15, y:3.0, w:2.6, h:2.05, fontSize:9.5, color:"ddeeff", wrap:true, valign:"top", shrinkText:true });
   });
 
-  // ── SLIDE: Behaviours + Actions ─────────────────────────────────────────
+  // ── SLIDE B: Behaviours ────────────────────────────────────────────────
   let sB = pres.addSlide();
   sB.background = { color:"F4F6FB" };
   sB.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.85, fill:{ color:lvl.bg }, line:{ color:lvl.bg } });
-  sB.addText(`${lvl.title} — BEHAVIOURS & ACTIONS`, { x:0.5, y:0.18, w:9, h:0.5, fontSize:16, bold:true, color:WHITE });
+  sB.addText(`${lvl.title} — BEHAVIOURS`, { x:0.5, y:0.2, w:9, h:0.5, fontSize:18, bold:true, color:WHITE });
 
-  // START / STOP / SUSTAIN — 3 rows
   const behavLabels = ["START", "STOP", "SUSTAIN"];
   const behavColors = ["166534", "C0392B", "17468B"];
-  (data.behaviours || []).slice(0,3).forEach((b, i) => {
+  (data.behaviours || []).slice(0, 3).forEach((b, i) => {
     const bp = plain(b);
-    // Strip "START:", "STOP:", "SUSTAIN:" prefix if present
-    const colonIdx = bp.indexOf(":");
-    const label = behavLabels[i];
-    const bodyText = colonIdx > -1 ? bp.substring(colonIdx + 1).trim().substring(0, 180) : bp.substring(0, 180);
-    const yy = 1.0 + i * 1.0;
-    sB.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:1.1, h:0.8, fill:{ color:behavColors[i] }, line:{ color:behavColors[i] } });
-    sB.addText(label, { x:0.4, y:yy+0.25, w:1.1, h:0.3, fontSize:10, bold:true, color:WHITE, align:"center" });
-    sB.addShape(pres.shapes.RECTANGLE, { x:1.6, y:yy, w:8.0, h:0.8, fill:{ color:WHITE }, line:{ color:"dde5f0" } });
-    sB.addText(bodyText, { x:1.75, y:yy+0.08, w:7.7, h:0.65, fontSize:10, color:GREY, wrap:true, shrinkText:true });
+    // Strip label prefix like "START: " or "START — "
+    const stripped = bp.replace(/^(START|STOP|SUSTAIN)\s*[:—\-]\s*/i, "").trim();
+    // Get name (before first period or comma) and body
+    const firstBreak = Math.min(
+      stripped.indexOf(". ") > -1 ? stripped.indexOf(". ") : 999,
+      stripped.indexOf(", ") > 30 ? stripped.indexOf(", ") : 999
+    );
+    const bodyText = truncateSentence(stripped, 340);
+    const yy = 1.0 + i * 1.45;
+    const rowH = 1.28;
+    sB.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:1.2, h:rowH, fill:{ color:behavColors[i] }, line:{ color:behavColors[i] } });
+    sB.addText(behavLabels[i], { x:0.4, y:yy + rowH/2 - 0.18, w:1.2, h:0.36, fontSize:11, bold:true, color:WHITE, align:"center" });
+    sB.addShape(pres.shapes.RECTANGLE, { x:1.7, y:yy, w:7.9, h:rowH, fill:{ color:WHITE }, line:{ color:"dde5f0" } });
+    sB.addText(bodyText, { x:1.88, y:yy + 0.1, w:7.55, h:rowH - 0.2, fontSize:10.5, color:GREY, wrap:true, valign:"top", shrinkText:true });
   });
 
-  // Actions — 3 compact cards
-  sB.addText("REQUIRED ACTIONS", { x:0.4, y:4.05, w:9, h:0.25, fontSize:9, bold:true, color:NAVY, charSpacing:3 });
-  (data.actions || []).slice(0,3).forEach((a, i) => {
+  // ── SLIDE C: Actions ───────────────────────────────────────────────────
+  let sC = pres.addSlide();
+  sC.background = { color:"F4F6FB" };
+  sC.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.85, fill:{ color:lvl.bg }, line:{ color:lvl.bg } });
+  sC.addText(`${lvl.title} — REQUIRED ACTIONS`, { x:0.5, y:0.2, w:9, h:0.5, fontSize:18, bold:true, color:WHITE });
+
+  (data.actions || []).slice(0, 3).forEach((a, i) => {
     const ap = plain(a);
     const dashIdx = ap.indexOf(" — ");
-    const actionTitle = dashIdx > -1 ? ap.substring(0, dashIdx) : ap.substring(0, 35);
-    const actionBody  = dashIdx > -1 ? ap.substring(dashIdx + 3, dashIdx + 130) : ap.substring(0, 130);
-    const xPos = 0.4 + i * 3.1;
-    sB.addShape(pres.shapes.RECTANGLE, { x:xPos, y:4.35, w:2.9, h:0.9, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
-    sB.addShape(pres.shapes.RECTANGLE, { x:xPos, y:4.35, w:2.9, h:0.25, fill:{ color:GOLD }, line:{ color:GOLD } });
-    sB.addText(`${i+1}. ${actionTitle}`, { x:xPos+0.1, y:4.37, w:2.7, h:0.2, fontSize:8, bold:true, color:DARK });
-    sB.addText(actionBody, { x:xPos+0.1, y:4.62, w:2.7, h:0.6, fontSize:8, color:GREY, wrap:true, shrinkText:true });
+    const actionTitle = dashIdx > -1 ? ap.substring(0, dashIdx).trim() : ap.substring(0, 50).trim();
+    const rawReason = dashIdx > -1 ? ap.substring(dashIdx + 3) : ap;
+    const actionBody = truncateSentence(rawReason, 400);
+    const yy = 1.0 + i * 1.45;
+    const cardH = 1.28;
+    // Number badge
+    sC.addShape(pres.shapes.RECTANGLE, { x:0.4, y:yy, w:0.65, h:cardH, fill:{ color:GOLD }, line:{ color:GOLD } });
+    sC.addText(`${i+1}`, { x:0.4, y:yy + cardH/2 - 0.2, w:0.65, h:0.4, fontSize:18, bold:true, color:DARK, align:"center" });
+    // Card
+    sC.addShape(pres.shapes.RECTANGLE, { x:1.15, y:yy, w:8.45, h:cardH, fill:{ color:WHITE }, line:{ color:"dde5f0" }, shadow:mkShadow() });
+    sC.addShape(pres.shapes.RECTANGLE, { x:1.15, y:yy, w:8.45, h:0.3, fill:{ color:"EEF3FB" }, line:{ color:"EEF3FB" } });
+    sC.addText(actionTitle, { x:1.3, y:yy + 0.04, w:8.1, h:0.24, fontSize:11, bold:true, color:NAVY, shrinkText:true });
+    sC.addText(actionBody, { x:1.3, y:yy + 0.35, w:8.1, h:0.88, fontSize:10, color:GREY, wrap:true, valign:"top", shrinkText:true });
   });
 });
 
@@ -1096,14 +1120,19 @@ const handlePPTX = async () => {
         if (!raw) return;
         // const blist = bullets(raw, 7);
         const summary3 = (() => {
-          const cleaned = plain(raw)
-            .split("\n")
-            .filter(l => !HEADER_PATTERN.test(l.trim()) && l.trim().length > 20)
-            .join(" ");
-          const sentences = cleaned.match(/[^.!?]+[.!?]+/g) || [];
-          return sentences.slice(0,2).join(" ").trim();
-        })();
-
+  const cleaned = plain(raw)
+    .split("\n")
+    .filter(l => !HEADER_PATTERN.test(l.trim()) && l.trim().length > 20)
+    .join(" ");
+  const sentences = cleaned.match(/[^.!?]+[.!?]+/g) || [];
+  // 3 sentences max, ~300 chars max
+  let result = "";
+  for (const s of sentences) {
+    if ((result + s).length > 300) break;
+    result += s + " ";
+  }
+  return result.trim() || cleaned.substring(0, 280) + "…";
+})();
         let ps = pres.addSlide();
         ps.background = { color:"F4F6FB" };
         ps.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.9, fill:{ color:pm.bg }, line:{ color:pm.bg } });
@@ -1117,56 +1146,60 @@ const handlePPTX = async () => {
         ps.addText(summary3 || plain(raw).substring(0,180), { x:0.58, y:1.28, w:8.9, h:0.55, fontSize:11, color:GREY, wrap:true, italic:true });
 
         // Parse sections dynamically based on AI headers
-        const sections = [];
-        let currentHeader = "KEY INSIGHTS";
-        let currentBullets = [];
-        
-        const lines = plain(raw).split("\n").map(l => l.trim()).filter(l => l);
-        let inSummary = false;
-        
-        lines.forEach(line => {
-          if (line === "SUMMARY") { inSummary = true; return; }
-          
-          // Detect headers (All caps, short, no punctuation at start)
-          if (/^[A-Z\s]+$/.test(line) && line.length > 3 && line.length < 35) {
-            inSummary = false;
-            if (currentBullets.length > 0) {
-              sections.push({ header: currentHeader, bullets: currentBullets });
-              currentBullets = [];
-            }
-            currentHeader = line;
-          } else if (!inSummary) {
-            // Clean up bullet points
-            const cleanLine = line.replace(/^[-\*•\d\.]+\s*/, "").trim();
-            if (cleanLine.length > 10) currentBullets.push(cleanLine);
-          }
-        });
-        if (currentBullets.length > 0) {
-          sections.push({ header: currentHeader, bullets: currentBullets });
-        }
+        // Build max 2 sections, each max 4 bullets, each bullet max 120 chars
+const sections = [];
+let currentHeader = "KEY INSIGHTS";
+let currentBullets = [];
 
-        // Render up to 2 columns
-        if (sections.length > 0) {
-          // Left column
-          const leftSec = sections[0];
-          ps.addText(leftSec.header, { x:0.5, y:2.05, w:4.5, h:0.28, fontSize:9, bold:true, color:NAVY, charSpacing:2 });
-          const leftItems = leftSec.bullets.slice(0,4).map((l,idx)=>({
-            text:l, options:{ bullet:true, breakLine:idx<3, fontSize:11, color:GREY, paraSpaceAfter:6 }
-          }));
-          ps.addText(leftItems, { x:0.5, y:2.38, w:4.5, h:2.8 });
+const lines = plain(raw).split("\n").map(l => l.trim()).filter(l => l);
+let inSummary = false;
 
-          // Right column
-          if (sections.length > 1) {
-            const rightSec = sections[1];
-            ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:3.3, fill:{ color:"fffbea" }, line:{ color:"f0e0a0" } });
-            ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:0.35, fill:{ color:GOLD }, line:{ color:GOLD } });
-            ps.addText(rightSec.header, { x:5.3, y:2.06, w:4.2, h:0.22, fontSize:8, bold:true, color:DARK, charSpacing:2 });
-            const rightItems = rightSec.bullets.slice(0,4).map((l,idx)=>({
-              text:l, options:{ bullet:true, breakLine:idx<3, fontSize:11, color:"5a4000", paraSpaceAfter:6 }
-            }));
-            ps.addText(rightItems, { x:5.3, y:2.42, w:4.2, h:2.7 });
-          }
-        }
+lines.forEach(line => {
+  if (line === "SUMMARY") { inSummary = true; return; }
+  if (/^[A-Z\s]+$/.test(line) && line.length > 3 && line.length < 35) {
+    inSummary = false;
+    if (currentBullets.length > 0) {
+      sections.push({ header: currentHeader, bullets: currentBullets });
+      currentBullets = [];
+    }
+    currentHeader = line;
+  } else if (!inSummary) {
+    const cleanLine = line.replace(/^[-\*•\d\.]+\s*/, "").trim();
+    // Truncate each bullet at sentence boundary, max 120 chars
+    if (cleanLine.length > 10) {
+      const truncated = cleanLine.length > 120
+        ? (() => {
+            const cut = cleanLine.substring(0, 120);
+            const lp = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf(", "));
+            return lp > 60 ? cut.substring(0, lp + 1) : cut.substring(0, cut.lastIndexOf(" ")) + "…";
+          })()
+        : cleanLine;
+      currentBullets.push(truncated);
+    }
+  }
+});
+if (currentBullets.length > 0) sections.push({ header: currentHeader, bullets: currentBullets });
+
+// Render max 2 columns, 4 bullets each
+if (sections.length > 0) {
+  const leftSec = sections[0];
+  ps.addText(leftSec.header, { x:0.5, y:2.05, w:4.5, h:0.28, fontSize:9, bold:true, color:NAVY, charSpacing:2 });
+  const leftItems = leftSec.bullets.slice(0, 4).map((l, idx) => ({
+    text: l, options:{ bullet:true, breakLine:idx < 3, fontSize:10.5, color:GREY, paraSpaceAfter:5 }
+  }));
+  ps.addText(leftItems, { x:0.5, y:2.38, w:4.5, h:2.8 });
+
+  if (sections.length > 1) {
+    const rightSec = sections[1];
+    ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:3.3, fill:{ color:"fffbea" }, line:{ color:"f0e0a0" } });
+    ps.addShape(pres.shapes.RECTANGLE, { x:5.2, y:2.0, w:4.4, h:0.35, fill:{ color:GOLD }, line:{ color:GOLD } });
+    ps.addText(rightSec.header, { x:5.3, y:2.06, w:4.2, h:0.22, fontSize:8, bold:true, color:DARK, charSpacing:2 });
+    const rightItems = rightSec.bullets.slice(0, 4).map((l, idx) => ({
+      text: l, options:{ bullet:true, breakLine:idx < 3, fontSize:10.5, color:"5a4000", paraSpaceAfter:5 }
+    }));
+    ps.addText(rightItems, { x:5.3, y:2.42, w:4.2, h:2.7 });
+  }
+}
       });
     }
 
