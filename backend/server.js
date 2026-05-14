@@ -127,8 +127,8 @@ app.put('/api/sessions/:code/groups/:num', async (req, res) => {
 app.post('/api/ai/nudge', async (req, res) => {
     try {
         const msg = await anthropic.messages.create({
-            model: "claude-3-5-sonnet-20240620",
-            max_tokens: 300,
+            model: "claude-sonnet-4-6",
+            max_tokens: 3000,
             system: req.body.system,
             messages: [{ role: "user", content: req.body.user }]
         });
@@ -145,8 +145,8 @@ app.post('/api/ai/automap', async (req, res) => {
         if (typeof userContent === 'object') userContent = JSON.stringify(userContent);
 
         const msg = await anthropic.messages.create({
-            model: "claude-3-5-sonnet-20240620",
-            max_tokens: 1500,
+            model: "claude-sonnet-4-6",
+            max_tokens: 3000,
             system: req.body.system,
             messages: [{ role: "user", content: userContent }]
         });
